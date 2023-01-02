@@ -6,7 +6,7 @@ edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "move_token_0"
+name = "move_token"
 
 [features]
 no-entrypoint = []
@@ -17,3 +17,5 @@ default = []
 
 [dependencies]
 anchor-lang = "0.26.0"
+anchor-spl = "0.26.0"
+mpl-token-metadata = { version = "1.4.3", features = ["no-entrypoint"] }

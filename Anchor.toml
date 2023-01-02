@@ -1,8 +1,10 @@
 [features]
 seeds = false
 skip-lint = false
+
 [programs.localnet]
 sol_swap_0 = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+move_token = "4fQVnLWKKKYxtxgGn7Haw8v2g2Hzbu8K61JvWKvqAi7W"
 
 [registry]
 url = "https://api.apr.dev"
