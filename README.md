@@ -14,6 +14,7 @@ yarn redeploy-program move-token
 
 # run test (in terminal tab 2)
 anchor run test-program -- move-token
+anchor run test-program -- sol-swap-0
 
 # Should not directly run via yarn because anchor run <sth> will do some more setting up
 yarn test-program move-token
