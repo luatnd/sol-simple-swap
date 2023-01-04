@@ -6,11 +6,17 @@ skip-lint = false
 sol_swap_0 = "Eu6vMZ2QTe2XUSoEupWFwsDEX2yLxxuzGo7ZybycakQS"
 move_token = "CpCRu5ziJbffaFLxxY1gQPV2Lpyq8iBecLweZUH8Rngu"
 
+[programs.devnet]
+sol_swap_0 = "Eu6vMZ2QTe2XUSoEupWFwsDEX2yLxxuzGo7ZybycakQS"
+move_token = "CpCRu5ziJbffaFLxxY1gQPV2Lpyq8iBecLweZUH8Rngu"
+
 [registry]
 url = "https://api.apr.dev"
 
+# Anchor will using this cluster for anchor cli
 [provider]
-cluster = "Localnet"
+#cluster = "Localnet"
+cluster = "devnet"
 wallet = "/Users/macos/.config/solana/id.json"
 
 [scripts]
