@@ -10,6 +10,7 @@ Run single test file
 solana-test-validator
 
 # rebuild and deploy program IF needed (in terminal tab 2)
+# This actually rebuild and redeploy the program
 yarn redeploy-program move-token
 
 # run test (in terminal tab 2)

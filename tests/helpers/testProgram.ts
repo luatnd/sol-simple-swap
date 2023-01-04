@@ -19,6 +19,9 @@ export default function testProgram<TProgram extends Idl>(
   tests: Array<(program: Program<TProgram>) => void>
 ) {
   describe(program_name, () => {
+    /**
+     * The [provider] was configured in Anchor.toml
+     */
     // Configure the client to use the local cluster.
     anchor.setProvider(anchor.AnchorProvider.env());
 

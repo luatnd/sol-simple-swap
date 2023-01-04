@@ -10,7 +10,7 @@ export function getProviderWallet() {
   const provider = getCurrentProvider();
   const wallet = provider.wallet as anchor.Wallet;
 
-  console.log('{getProviderWallet} wallet: ', wallet.publicKey.toString());
+  // console.log('{getProviderWallet} wallet: ', wallet.publicKey.toString());
 
   return wallet;
 }
