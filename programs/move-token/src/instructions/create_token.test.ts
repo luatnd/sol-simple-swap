@@ -6,24 +6,21 @@ import {sleep} from "../../../../tests/helpers/time";
 
 
 export default function test__create_token(program: Program<MoveToken>) {
-  it("canCreateNewToken", async () => canCreateNewToken(program));
-  it("Test 2", async () => {
-    console.log('{Test 2} : ', );
-    await sleep(300);
-  })
+  it("can create new token without errors", async () => testCreateNewToken(program));
+  // it("can mint some amount of token XXX to my wallet", async () => testMintToMyWallet(program))
 }
 
 
-async function canCreateNewToken(program: Program<MoveToken>) {
-  console.log('{canCreateNewToken} : ', );
-  await sleep(1000);
+async function testCreateNewToken(program: Program<MoveToken>) {
+  console.log('{testCreateNewToken} : ', );
+  // await sleep(1000);
 
 
   const METAPLEX_PROGRAM_ID = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s";
   const tokenMetadataProgramId = new anchor.web3.PublicKey(METAPLEX_PROGRAM_ID);
   const payer = getProviderWallet();
   const mintKeypair: anchor.web3.Keypair = anchor.web3.Keypair.generate();
-  console.log(`{canCreateNewToken} New random token addr: ${mintKeypair.publicKey}`);
+  console.log(`{canCreateNewToken} New random mint auth: ${mintKeypair.publicKey}`);
 
 
 
@@ -43,9 +40,11 @@ async function canCreateNewToken(program: Program<MoveToken>) {
     ],
     tokenMetadataProgramId
   ))[0];
+  console.log('{testCreateNewToken} metadataAddress: ', metadataAddress);
 
 
   // Add your test here.
+  // Create a token foreach test run.
   const tx = await program.methods.createToken(
     metadata.name,
     metadata.symbol,
@@ -64,5 +63,11 @@ async function canCreateNewToken(program: Program<MoveToken>) {
     })
     .signers([mintKeypair, payer.payer])
     .rpc();
-  console.log("{canCreateNewToken} Your transaction signature", tx);
+  console.log("{testCreateNewToken} Your transaction signature", tx);
 }
+
+// function testMintToMyWallet(program: Program<MoveToken>) {
+//   console.log('{testMintToMyWallet} : ', );
+//
+//
+// }

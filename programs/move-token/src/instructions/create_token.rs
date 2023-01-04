@@ -19,6 +19,11 @@ pub fn create_token(
 ) -> Result<()> {
   msg!("[move_token.create_token] Metadata account address: {}", &ctx.accounts.metadata_account.key());
 
+  // let metadata_account = ctx.accounts.metadata_account.to_account_info();
+  // msg!("[move_token.create_token] Metadata account: {:?}", metadata_account);
+  // let token_metadata_program = &ctx.accounts.token_metadata_program;
+  // msg!("[move_token.create_token] token_metadata_program: {:?}", token_metadata_program);
+
   // More detail: https://docs.metaplex.com/programs/token-metadata/instructions
   // Cross Program Call Depth index: 0
   let ix = mpl_instruction::create_metadata_accounts_v3(
@@ -33,8 +38,8 @@ pub fn create_token(
     metadata_uri,
     None,
     0,
-    true,
-    false,
+    true, // True if an Instruction requires a Transaction signature matching pubkey.
+    true, // metadata can be modify later on
     None,
     None,
     None,
@@ -42,9 +47,9 @@ pub fn create_token(
   let accounts = [
     ctx.accounts.metadata_account.to_account_info(),
     ctx.accounts.mint_account.to_account_info(),
-    ctx.accounts.payer.to_account_info(),   // Mint Authority
+    ctx.accounts.mint_authority.to_account_info(),   // Mint Authority
     ctx.accounts.payer.to_account_info(),   // payer
-    ctx.accounts.payer.to_account_info(),   // Update Authority
+    ctx.accounts.mint_authority.to_account_info(),   // Update Authority
     ctx.accounts.rent.to_account_info(),
   ];
 
@@ -56,6 +61,7 @@ pub fn create_token(
   ]];
 
   invoke_signed(&ix, &accounts, seeds)?;
+
   msg!("[move_token.create_token] Done");
 
   Ok(())
@@ -64,13 +70,11 @@ pub fn create_token(
 
 #[derive(Accounts)]
 pub struct CreateTokenMint<'info> {
-  // can I rm some of this props?
   #[account(
     init,
     payer = payer,
     mint::decimals = 9,
-    mint::authority = mint_authority,
-    mint::freeze_authority = payer,
+    mint::authority = mint_authority.key(),
   )]
   pub mint_account: Account<'info, token::Mint>,
 

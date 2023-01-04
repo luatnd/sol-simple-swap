@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 mod instructions;
 use instructions::*; // Must import as * to avoid error
 
-declare_id!("4fQVnLWKKKYxtxgGn7Haw8v2g2Hzbu8K61JvWKvqAi7W");
+declare_id!("CpCRu5ziJbffaFLxxY1gQPV2Lpyq8iBecLweZUH8Rngu");
 
 #[program]
 pub mod move_token {
