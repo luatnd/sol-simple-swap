@@ -74,7 +74,7 @@ async function testCreateNewToken(program: Program<MoveToken>) {
     })
     .signers([mintKeypair, payer.payer])
     .rpc();
-  console.log("{testCreateNewToken} Your transaction signature", tx);
+  console.log("{testCreateNewToken} tx", tx);
 
   // save into tmp data
   persistPrevMintTokenInfoToTmpData({

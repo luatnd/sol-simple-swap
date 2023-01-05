@@ -1,14 +1,12 @@
 # Test
-Run all test
+### Run all test
 ```
 anchor test
 ```
 
-Run single test file
+### Run single test file
+### Run test for single program
 ```
-# start validator first (in terminal tab 1)
-solana-test-validator
-
 # rebuild and deploy program IF needed (in terminal tab 2)
 # This actually rebuild and redeploy the program
 yarn redeploy-program move-token

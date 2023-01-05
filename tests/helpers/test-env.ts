@@ -18,6 +18,7 @@ export function getProviderWallet() {
 export function getTestTokenMetadata() {
   return {
     uri: "https://gist.githubusercontent.com/luatnd/f28c2da59b2eea505e7d8bf9631dcc17/raw/feb550c81d82262442b0d2cddc14e1013eae5211/sol-token-luat.json",
+    decimals: 9,
     metadata: {
       "name": "Luat Dev",
       "symbol": "LUAT",

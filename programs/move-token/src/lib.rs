@@ -25,12 +25,26 @@ pub mod move_token {
     )
   }
 
-  pub fn mint_to(
-    ctx: Context<MintToYourWallet>,
+  // pub fn mint_to(
+  //   ctx: Context<MintToYourWallet>,
+  //   amount: u64,
+  //   mint_authority_pda_bump: u8,
+  // ) -> Result<()> {
+  //   mint_token::mint_to_your_wallet(
+  //     ctx,
+  //     amount,
+  //     mint_authority_pda_bump,
+  //   )
+  // }
+
+  pub fn mint_to_another_wallet(
+    ctx: Context<MintToAnotherWallet>,
     amount: u64,
     mint_authority_pda_bump: u8,
   ) -> Result<()> {
-    mint_token::mint_to_your_wallet(
+    // TODO: Validate amount is not greater than 100
+
+    mint_to_another_wallet::mint_to_another_wallet(
       ctx,
       amount,
       mint_authority_pda_bump,
