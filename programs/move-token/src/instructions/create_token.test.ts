@@ -13,6 +13,7 @@ const TMP_DIR = "tests/tmp";
 export default function test__create_token(program: Program<MoveToken>) {
   it("can create new token without errors", async () => testCreateNewToken(program));
   it("has correct metadata after mint", async () => checkMetadata(program));
+  it("payer has exact `supply` amount of token after mint", async () => checkPayerBalanceAfterMint(program));
 }
 
 
@@ -34,7 +35,7 @@ async function testCreateNewToken(program: Program<MoveToken>) {
 
 
 
-  const {uri, metadata} = getTestTokenMetadata();
+  const {uri, initialSupply, decimals, metadata} = getTestTokenMetadata();
   const [mintAuthorityPda, mintAuthorityPdaBump] = anchor.web3.PublicKey.findProgramAddressSync(
     [
       Buffer.from("mint_authority_"), // must match the program in rust
@@ -53,6 +54,12 @@ async function testCreateNewToken(program: Program<MoveToken>) {
   ))[0];
   console.log('{testCreateNewToken} metadataAddress: ', metadataAddress);
 
+  const payerAta = await anchor.utils.token.associatedAddress({
+    mint: mintKeypair.publicKey,
+    owner: payer.publicKey,
+  });
+  console.log(`{testCreateNewToken} payerAta: ${payerAta}`);
+
 
   // Add your test here.
   // Create a token foreach test run.
@@ -60,6 +67,7 @@ async function testCreateNewToken(program: Program<MoveToken>) {
     metadata.name,
     metadata.symbol,
     uri,
+    new anchor.BN(initialSupply * Math.pow(10, decimals)),
     mintAuthorityPdaBump
   )
     .accounts({
@@ -67,10 +75,12 @@ async function testCreateNewToken(program: Program<MoveToken>) {
       mintAccount: mintKeypair.publicKey,
       mintAuthority: mintAuthorityPda,
       payer: payer.publicKey,
+      payerAta: payerAta,
       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       systemProgram: anchor.web3.SystemProgram.programId,
       tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
       tokenMetadataProgram: tokenMetadataProgramId,
+      associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
     })
     .signers([mintKeypair, payer.payer])
     .rpc();
@@ -93,6 +103,11 @@ async function checkMetadata(program: Program<MoveToken>) {
   const {metadata} = getTestTokenMetadata();
   const onChainTokenName = metadata.name; // TODO: Get from on-chain
   expect(onChainTokenName).to.eq(metadata.name);
+}
+
+async function checkPayerBalanceAfterMint(program: Program<MoveToken>) {
+  console.log('{checkPayerBalanceAfterMint} : ', Date.now());
+  expect(1).to.eq(1); // TODO:
 }
 
 

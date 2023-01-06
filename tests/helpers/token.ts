@@ -15,3 +15,12 @@ export async function airdropSOL(recipientPubKey: anchor.web3.PublicKey, amountO
     signature: airdropSignature,
   });
 }
+
+export async function airDropSolIfBalanceLowerThan(amountOfSol: number, recipientPubKey: anchor.web3.PublicKey) {
+  const provider = getCurrentProvider();
+  const balance = await provider.connection.getBalance(recipientPubKey);
+  if (balance < amountOfSol * anchor.web3.LAMPORTS_PER_SOL) {
+    console.log('{airDropSolIfBalanceLowerThan} ' + `${recipientPubKey} has small balance ${balance / anchor.web3.LAMPORTS_PER_SOL} SOL, airdrop ${amountOfSol} SOL`);
+    await airdropSOL(recipientPubKey, amountOfSol);
+  }
+}

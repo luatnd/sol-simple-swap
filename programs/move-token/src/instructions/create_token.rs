@@ -4,6 +4,7 @@ use anchor_lang::{
 };
 use anchor_spl::{
   token,
+  associated_token,
 };
 use mpl_token_metadata::{
   instruction as mpl_instruction,
@@ -15,6 +16,7 @@ pub fn create_token(
   title: String,
   symbol: String,
   metadata_uri: String,
+  initial_supply: u64, // amount in token units
   mint_authority_pda_bump: u8,
 ) -> Result<()> {
   msg!("[move_token.create_token] Metadata account address: {}", &ctx.accounts.metadata_account.key());
@@ -62,7 +64,44 @@ pub fn create_token(
 
   invoke_signed(&ix, &accounts, seeds)?;
 
-  msg!("[move_token.create_token] Done");
+  msg!("[move_token.create_token] Init Done");
+
+  mint_to_payer_wallet(
+    ctx,
+    initial_supply,
+    mint_authority_pda_bump,
+  )?;
+  msg!("[move_token.create_token] Mint Supply Done");
+
+  Ok(())
+}
+
+// private function
+fn mint_to_payer_wallet(
+  ctx: Context<CreateTokenMint>,
+  initial_supply: u64, // amount in lamport units, not in token
+  mint_authority_pda_bump: u8,
+) -> Result<()> {
+  //
+  // Mint initial supply to payer wallet right after init
+  //
+  msg!("Token Address: {}", &ctx.accounts.payer_ata.key());
+  token::mint_to(
+    CpiContext::new_with_signer(
+      ctx.accounts.token_program.to_account_info(),
+      token::MintTo {
+        mint: ctx.accounts.mint_account.to_account_info(),
+        to: ctx.accounts.payer_ata.to_account_info(),
+        authority: ctx.accounts.mint_authority.to_account_info(),
+      },
+      &[&[
+        b"mint_authority_",
+        ctx.accounts.mint_account.key().as_ref(),
+        &[mint_authority_pda_bump],
+      ]]
+    ),
+    initial_supply,
+  )?;
 
   Ok(())
 }
@@ -90,6 +129,15 @@ pub struct CreateTokenMint<'info> {
   )]
   pub mint_authority: Account<'info, MintAuthorityPda>,
 
+  // mint some token payer right after init mint
+  #[account(
+    init,
+    payer = payer,
+    associated_token::mint = mint_account,
+    associated_token::authority = payer,
+  )]
+  pub payer_ata: Account<'info, token::TokenAccount>,
+
   #[account(mut)]
   pub payer: Signer<'info>,
   pub rent: Sysvar<'info, Rent>,
@@ -102,6 +150,7 @@ pub struct CreateTokenMint<'info> {
   pub token_program: Program<'info, token::Token>,
   /// _CHECK: Metaplex will check this
   pub token_metadata_program: UncheckedAccount<'info>,
+  pub associated_token_program: Program<'info, associated_token::AssociatedToken>,
 }
 
 #[account]
