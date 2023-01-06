@@ -44,6 +44,7 @@ pub struct TransferToAnotherWallet<'info> {
   )]
   pub owner_token_account: Account<'info, token::TokenAccount>,
 
+  /// CHECK: no re-initialization attacks
   #[account(
     init_if_needed,
     payer = owner,

@@ -55,12 +55,6 @@ async function mintTokenToAnyWallet(program: Program<MoveToken>) {
   });
   console.log(`associatedTokenAccount: ${recipientAta}`);
 
-  // get current token balance of recipient
-  // const currentBalance = await anchor.utils.acc.getTokenAccountBalance(provider.connection, ata);
-  // get current account balance of recipient
-  // const currentBalance = await provider.connection.getBalance(recipientPubKey);
-  // console.log(`Current balance: ${currentBalance.value}`);
-
   const tx = await program.methods.mintToAnotherWallet(
     new anchor.BN(AIR_DROP_AMOUNT * Math.pow(10, tokenInfo.decimals)),
     mintAuthorityPdaBump
@@ -80,6 +74,5 @@ async function mintTokenToAnyWallet(program: Program<MoveToken>) {
     .rpc();
   console.log("{mintTokenToAnyWallet} tx", tx);
 
-  // const afterAirDropBalance = 0;
-  // expect(10).to.equal(11);
+  // TODO: Test case: Balance of recipient should be increased by X, owner by -X
 }

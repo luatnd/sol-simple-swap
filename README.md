@@ -1,3 +1,7 @@
+# About
+- Token mint demo
+- Swap demo with fixed rate LP (not AMM) 
+
 # Test
 ### Run all test
 ```
@@ -27,3 +31,7 @@ If /bin/sh does not support inline, you need to change yarn script shell to /bin
 > ```
 > yarn config set script-shell /bin/bash
 > ```
+
+# Common name in the code
+- ATA: Associated Token Address (Token Account)
+- TMA: Token Mint Address (Token Address, Mint, ...)

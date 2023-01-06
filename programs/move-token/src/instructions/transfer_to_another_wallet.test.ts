@@ -3,7 +3,7 @@ import {Program} from "@project-serum/anchor";
 import {MoveToken} from "../../../../target/types/move_token";
 import {getCurrentProvider, getProviderWallet, getTestTokenMetadata} from "../../../../tests/helpers/test-env";
 import {getPrevMintTokenInfoFromTmpData} from "./create_token.test";
-import {airdropSOL, airDropSolIfBalanceLowerThan} from "../../../../tests/helpers/token";
+import {expect} from "chai";
 
 
 export default function test__transferTokenToOtherWallet(program: Program<MoveToken>) {
@@ -38,21 +38,36 @@ async function testTransferToOtherWallet(program: Program<MoveToken>) {
   });
   console.log(`Recipient Token Address: ${recipientTokenAddress}`);
 
-  const tx = await program.methods.transferToAnotherWallet(
-    new anchor.BN(TRANSFER_AMOUNT * Math.pow(10, tokenInfo.decimals)),
-  )
-    .accounts({
-      mintAccount: mintKeypair.publicKey,
-      ownerTokenAccount: ownerTokenAddress,
-      recipientAta: recipientTokenAddress,
-      owner: payer.publicKey,
-      recipient: recipientPubKey,
-      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-      systemProgram: anchor.web3.SystemProgram.programId,
-      tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
-      associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
-    })
-    .signers([payer.payer])
-    .rpc();
-  console.log("{testTransferToOtherWallet} tx", tx);
+  const receiverBalanceBefore = await provider.connection.getTokenAccountBalance(recipientTokenAddress);
+  const senderBalanceBefore = await provider.connection.getTokenAccountBalance(ownerTokenAddress);
+
+  try {
+    const tx = await program.methods.transferToAnotherWallet(
+      new anchor.BN(TRANSFER_AMOUNT * Math.pow(10, tokenInfo.decimals)),
+    )
+      .accounts({
+        mintAccount: mintKeypair.publicKey,
+        ownerTokenAccount: ownerTokenAddress,
+        recipientAta: recipientTokenAddress,
+        owner: payer.publicKey,
+        recipient: recipientPubKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
+        associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+      })
+      .signers([payer.payer])
+      .rpc();
+    console.log("{testTransferToOtherWallet} tx", tx);
+  } catch (e) {
+    console.log('{testTransferToOtherWallet} tx error: ', e);
+  }
+
+  const receiverBalanceAfter = await provider.connection.getTokenAccountBalance(recipientTokenAddress);
+  const senderBalanceAfter = await provider.connection.getTokenAccountBalance(ownerTokenAddress);
+
+  // Test: recipient balance should be increased by X
+  const EPSILON = 1e-9;
+  expect(receiverBalanceAfter.value.uiAmount).to.approximately(receiverBalanceBefore.value.uiAmount + TRANSFER_AMOUNT, EPSILON);
+  expect(senderBalanceAfter.value.uiAmount).to.approximately(senderBalanceBefore.value.uiAmount - TRANSFER_AMOUNT, EPSILON);
 }
