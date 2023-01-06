@@ -36,12 +36,10 @@ async function mintTokenToAnyWallet(program: Program<MoveToken>) {
   console.log(`{mintTokenToAnyWallet} mint addr: ${mintKeypair.publicKey}`);
 
   const recipientPubKey = new anchor.web3.PublicKey(RECIPIENT_ADDR);
+  console.log(`Recipient pubkey: ${recipientPubKey}`);
 
   // Airdrop 1 SOL to recipient for paying for the transaction
-  // Don't need to airdrop because the recipient is a SOL millionaire
-  // await airdropSOL(recipientPubKey, AIR_DROP_AMOUNT);
-
-  console.log(`Recipient pubkey: ${recipientPubKey}`);
+  // Don't need to do so in this new code version
 
   const [mintAuthorityPda, mintAuthorityPdaBump] = anchor.web3.PublicKey.findProgramAddressSync(
     [
@@ -51,11 +49,11 @@ async function mintTokenToAnyWallet(program: Program<MoveToken>) {
     program.programId,
   );
 
-  const associatedTokenAccount = await anchor.utils.token.associatedAddress({
+  const recipientAta = await anchor.utils.token.associatedAddress({
     mint: mintKeypair.publicKey,
     owner: recipientPubKey
   });
-  console.log(`associatedTokenAccount: ${associatedTokenAccount}`);
+  console.log(`associatedTokenAccount: ${recipientAta}`);
 
   // get current token balance of recipient
   // const currentBalance = await anchor.utils.acc.getTokenAccountBalance(provider.connection, ata);
@@ -71,7 +69,7 @@ async function mintTokenToAnyWallet(program: Program<MoveToken>) {
       mintAccount: mintKeypair.publicKey,
       mintAuthority: mintAuthorityPda,
       recipient: recipientPubKey,
-      recipientAta: associatedTokenAccount,
+      recipientAta: recipientAta,
       payer: payer.publicKey,
       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       systemProgram: anchor.web3.SystemProgram.programId,

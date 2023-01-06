@@ -14,6 +14,7 @@ pub mod move_token {
     metadata_title: String,
     metadata_symbol: String,
     metadata_uri: String,
+    initial_supply: u64,
     mint_authority_pda_bump: u8,
   ) -> Result<()> {
     create_token::create_token(
@@ -21,21 +22,10 @@ pub mod move_token {
       metadata_title,
       metadata_symbol,
       metadata_uri,
+      initial_supply,
       mint_authority_pda_bump,
     )
   }
-
-  // pub fn mint_to(
-  //   ctx: Context<MintToYourWallet>,
-  //   amount: u64,
-  //   mint_authority_pda_bump: u8,
-  // ) -> Result<()> {
-  //   mint_token::mint_to_your_wallet(
-  //     ctx,
-  //     amount,
-  //     mint_authority_pda_bump,
-  //   )
-  // }
 
   pub fn mint_to_another_wallet(
     ctx: Context<MintToAnotherWallet>,
@@ -48,6 +38,16 @@ pub mod move_token {
       ctx,
       amount,
       mint_authority_pda_bump,
+    )
+  }
+
+  pub fn transfer_to_another_wallet(
+    ctx: Context<TransferToAnotherWallet>,
+    amount: u64,
+  ) -> Result<()> {
+    transfer_to_another_wallet::transfer_to_another_wallet(
+      ctx,
+      amount,
     )
   }
 }
