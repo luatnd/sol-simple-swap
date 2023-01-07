@@ -2,6 +2,8 @@
 - Token mint demo
 - Swap demo with fixed rate LP (not AMM) 
 
+Demo UI here: https:// TODO
+
 # Test
 ### Run all test
 ```
@@ -32,6 +34,12 @@ If /bin/sh does not support inline, you need to change yarn script shell to /bin
 > yarn config set script-shell /bin/bash
 > ```
 
+# Rust unit test
+TODO: Don't have time to write it but there was an example at: 
+
 # Common name in the code
 - ATA: Associated Token Address (Token Account)
 - TMA: Token Mint Address (Token Address, Mint, ...)
+
+# Development
+FE: Remember to run `anchor build` `yarn sync-output-to-fe` first to do some code gen for FE
