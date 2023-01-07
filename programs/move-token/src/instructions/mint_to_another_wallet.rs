@@ -61,12 +61,8 @@ pub struct MintToAnotherWallet<'info> {
   /// CHECK: This is for airdrops
   pub recipient: UncheckedAccount<'info>,
 
-  // TODO: init always create ATA,
-  // so if this is not first time, the program will failed to create ATA
-  // Then tx was failed
-  // But it's good in this case because the logic is we only airdrop to a user once
   #[account(
-    init,
+    init_if_needed,
     payer = payer,
     associated_token::mint = mint_account,
     associated_token::authority = recipient,
