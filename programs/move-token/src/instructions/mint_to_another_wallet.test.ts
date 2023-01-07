@@ -32,8 +32,9 @@ async function mintTokenToAnyWallet(program: Program<MoveToken>) {
 
   // await sleep(1000);
   const prevMintToken = getPrevMintTokenInfoFromTmpData(); // Test run async but mochajs test case will run once by one
-  const mintKeypair = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(prevMintToken.mintKeypair.secret));
-  console.log(`{mintTokenToAnyWallet} mint addr: ${mintKeypair.publicKey}`);
+  // const mintKeypair = anchor.web3.Keypair.fromSecretKey(Uint8Array.from(prevMintToken.mintKeypair.secret));
+  const mintKeypairPubKey = new anchor.web3.PublicKey(prevMintToken.mintKeypair.publicKey);
+  console.log(`{mintTokenToAnyWallet} mint addr: ${mintKeypairPubKey}`);
 
   const recipientPubKey = new anchor.web3.PublicKey(RECIPIENT_ADDR);
   console.log(`Recipient pubkey: ${recipientPubKey}`);
@@ -44,13 +45,13 @@ async function mintTokenToAnyWallet(program: Program<MoveToken>) {
   const [mintAuthorityPda, mintAuthorityPdaBump] = anchor.web3.PublicKey.findProgramAddressSync(
     [
       Buffer.from("mint_authority_"),
-      mintKeypair.publicKey.toBuffer(),
+      mintKeypairPubKey.toBuffer(),
     ],
     program.programId,
   );
 
   const recipientAta = await anchor.utils.token.associatedAddress({
-    mint: mintKeypair.publicKey,
+    mint: mintKeypairPubKey,
     owner: recipientPubKey
   });
   console.log(`associatedTokenAccount: ${recipientAta}`);
@@ -60,7 +61,7 @@ async function mintTokenToAnyWallet(program: Program<MoveToken>) {
     mintAuthorityPdaBump
   )
     .accounts({
-      mintAccount: mintKeypair.publicKey,
+      mintAccount: mintKeypairPubKey,
       mintAuthority: mintAuthorityPda,
       recipient: recipientPubKey,
       recipientAta: recipientAta,

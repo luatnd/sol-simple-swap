@@ -1,5 +1,6 @@
 import * as anchor from "@project-serum/anchor";
 import {Program, Idl} from "@project-serum/anchor";
+import {getTestProgram} from "./test-env";
 
 /**
  * Run test for a program.
@@ -19,13 +20,7 @@ export default function testProgram<TProgram extends Idl>(
   tests: Array<(program: Program<TProgram>) => void>
 ) {
   describe(program_name, () => {
-    /**
-     * The [provider] was configured in Anchor.toml
-     */
-    // Configure the client to use the local cluster.
-    anchor.setProvider(anchor.AnchorProvider.env());
-
-    const program = anchor.workspace[program_name] as Program<TProgram>;
+    const program = getTestProgram<TProgram>(program_name);
     tests.forEach((test) => test(program));
   });
 }

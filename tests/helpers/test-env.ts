@@ -1,5 +1,15 @@
 import * as anchor from "@project-serum/anchor";
-import {AnchorProvider} from "@project-serum/anchor";
+import {AnchorProvider, Idl, Program} from "@project-serum/anchor";
+
+export function getTestProgram<TProgram extends Idl>(program_name: string) {
+  /**
+   * The [provider] was configured in Anchor.toml
+   */
+  // Configure the client to use the local cluster.
+  anchor.setProvider(anchor.AnchorProvider.env());
+  const program = anchor.workspace[program_name] as Program<TProgram>;
+  return program;
+}
 
 export function getCurrentProvider() {
   // NOTE: We already anchor.setProvider at the beginning of the describe block
