@@ -129,7 +129,7 @@ pub struct CreateTokenMint<'info> {
   )]
   pub mint_authority: Account<'info, MintAuthorityPda>,
 
-  // mint some token payer right after init mint
+  // use for minting some token payer right after init mint
   #[account(
     init,
     payer = payer,

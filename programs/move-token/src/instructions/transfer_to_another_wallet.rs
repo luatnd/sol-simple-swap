@@ -4,7 +4,10 @@ use anchor_spl::{
   associated_token,
 };
 
-
+/*
+To transfer token to another wallet, we have so many ways to do it.
+So this fn is not necessary. Just leave it here for reference.
+ */
 pub fn transfer_to_another_wallet(
   ctx: Context<TransferToAnotherWallet>,
   amount: u64,
