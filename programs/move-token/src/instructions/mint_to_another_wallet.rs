@@ -12,6 +12,8 @@ pub fn mint_to_another_wallet(
   mint_authority_pda_bump: u8,
 ) -> Result<()> {
 
+  // Skip token supply validation.
+
   msg!("Minting token to token account...");
   msg!("Mint: {}", &ctx.accounts.mint_account.to_account_info().key());
   msg!("Associated Token Address (ATA): {}", &ctx.accounts.recipient_ata.key());

@@ -1,7 +1,10 @@
 use anchor_lang::prelude::*;
 
 mod instructions;
+mod errors;
+
 use instructions::*; // Must import as * to avoid error
+use crate::errors::*;
 
 declare_id!("CpCRu5ziJbffaFLxxY1gQPV2Lpyq8iBecLweZUH8Rngu");
 
@@ -32,7 +35,7 @@ pub mod move_token {
     amount: u64,
     mint_authority_pda_bump: u8,
   ) -> Result<()> {
-    // TODO: Validate amount is not greater than 100
+    require!(amount <= 1000, MoveTokenError::InvalidAirDropAmount);
 
     mint_to_another_wallet::mint_to_another_wallet(
       ctx,
@@ -41,13 +44,13 @@ pub mod move_token {
     )
   }
 
-  pub fn transfer_to_another_wallet(
-    ctx: Context<TransferToAnotherWallet>,
-    amount: u64,
-  ) -> Result<()> {
-    transfer_to_another_wallet::transfer_to_another_wallet(
-      ctx,
-      amount,
-    )
-  }
+  // pub fn transfer_to_another_wallet(
+  //   ctx: Context<TransferToAnotherWallet>,
+  //   amount: u64,
+  // ) -> Result<()> {
+  //   transfer_to_another_wallet::transfer_to_another_wallet(
+  //     ctx,
+  //     amount,
+  //   )
+  // }
 }
