@@ -10,6 +10,12 @@ use mpl_token_metadata::{
   instruction as mpl_instruction,
 };
 
+#[constant]
+pub const TOKEN_DECIMAL: u8 = 9;
+
+#[constant]
+pub const MINT_AUTH_SEED_PREFIX: &[u8] = b"mint_authority_";
+
 
 pub fn create_token(
   ctx: Context<CreateTokenMint>,
@@ -57,7 +63,7 @@ pub fn create_token(
 
   let binding = ctx.accounts.mint_account.key();
   let seeds: &[&[&[u8]]] = &[&[
-    b"mint_authority_",
+    MINT_AUTH_SEED_PREFIX,
     &binding.as_ref(),
     &[mint_authority_pda_bump],
   ]];
@@ -95,7 +101,7 @@ fn mint_to_payer_wallet(
         authority: ctx.accounts.mint_authority.to_account_info(),
       },
       &[&[
-        b"mint_authority_",
+        MINT_AUTH_SEED_PREFIX,
         ctx.accounts.mint_account.key().as_ref(),
         &[mint_authority_pda_bump],
       ]]
@@ -112,7 +118,7 @@ pub struct CreateTokenMint<'info> {
   #[account(
     init,
     payer = payer,
-    mint::decimals = 9,
+    mint::decimals = TOKEN_DECIMAL,
     mint::authority = mint_authority.key(),
   )]
   pub mint_account: Account<'info, token::Mint>,
@@ -122,7 +128,7 @@ pub struct CreateTokenMint<'info> {
     payer = payer,
     space = 8 + 32,
     seeds = [
-      b"mint_authority_",
+      MINT_AUTH_SEED_PREFIX,
       mint_account.key().as_ref(),
     ],
     bump

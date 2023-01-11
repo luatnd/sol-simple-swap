@@ -50,7 +50,7 @@ export async function createNewToken(
 
   const [mintAuthorityPda, mintAuthorityPdaBump] = anchor.web3.PublicKey.findProgramAddressSync(
     [
-      Buffer.from("mint_authority_"), // must match the program in rust
+      Buffer.from("mint_authority_"), // TODO: get from program.constants
       mintKeypair.publicKey.toBuffer(),
     ],
     program.programId,
@@ -151,7 +151,7 @@ export async function airdropToken(
 
   const [mintAuthorityPda, mintAuthorityPdaBump] = anchor.web3.PublicKey.findProgramAddressSync(
     [
-      Buffer.from("mint_authority_"),
+      Buffer.from("mint_authority_"), // TODO: get from program.constants
       mintKeypairPubKey.toBuffer(),
     ],
     program.programId,

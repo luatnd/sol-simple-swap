@@ -44,7 +44,7 @@ async function mintTokenToAnyWallet(program: Program<MoveToken>) {
 
   const [mintAuthorityPda, mintAuthorityPdaBump] = anchor.web3.PublicKey.findProgramAddressSync(
     [
-      Buffer.from("mint_authority_"),
+      Buffer.from("mint_authority_"), // TODO: get from program.constants
       mintKeypairPubKey.toBuffer(),
     ],
     program.programId,

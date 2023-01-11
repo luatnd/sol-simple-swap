@@ -3,7 +3,7 @@ use anchor_spl::{
   token,
   associated_token,
 };
-use crate::instructions::MintAuthorityPda;
+use crate::instructions::{MINT_AUTH_SEED_PREFIX, MintAuthorityPda};
 
 
 pub fn mint_to_another_wallet(
@@ -26,7 +26,7 @@ pub fn mint_to_another_wallet(
         authority: ctx.accounts.mint_authority.to_account_info(),
       },
       &[&[
-        b"mint_authority_",
+        MINT_AUTH_SEED_PREFIX,
         ctx.accounts.mint_account.key().as_ref(),
         &[mint_authority_pda_bump],
       ]]
@@ -53,7 +53,7 @@ pub struct MintToAnotherWallet<'info> {
   #[account(
     mut,
     seeds = [
-      b"mint_authority_",
+      MINT_AUTH_SEED_PREFIX,
       mint_account.key().as_ref()
     ],
     bump = mint_authority_pda_bump

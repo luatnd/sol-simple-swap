@@ -35,7 +35,7 @@ pub mod move_token {
     amount: u64,
     mint_authority_pda_bump: u8,
   ) -> Result<()> {
-    require!(amount <= 1000, MoveTokenError::InvalidAirDropAmount);
+    require!(amount <= 1000 * 10_u64.pow(9), MoveTokenError::InvalidAirDropAmount);
 
     mint_to_another_wallet::mint_to_another_wallet(
       ctx,

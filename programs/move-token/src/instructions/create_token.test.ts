@@ -38,7 +38,7 @@ async function testCreateNewToken(program: Program<MoveToken>) {
   const {uri, initialSupply, decimals, metadata} = getTestTokenMetadata();
   const [mintAuthorityPda, mintAuthorityPdaBump] = anchor.web3.PublicKey.findProgramAddressSync(
     [
-      Buffer.from("mint_authority_"), // must match the program in rust
+      Buffer.from("mint_authority_"), // TODO: get from program.constants
       mintKeypair.publicKey.toBuffer(),
     ],
     program.programId,
