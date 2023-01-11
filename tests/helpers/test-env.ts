@@ -40,3 +40,12 @@ export function getTestTokenMetadata() {
     }
   };
 }
+
+export function getProgramConstant(constant_name: string, program): string {
+  const constants = program.idl.constants.filter(i => i.name === constant_name);
+  if (constants[0]) {
+    return constants[0].value;
+  }
+
+  return undefined;
+}

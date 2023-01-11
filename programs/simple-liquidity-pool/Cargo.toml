@@ -1,12 +1,12 @@
 [package]
-name = "constant-lp"
+name = "simple-liquidity-pool"
 version = "0.1.0"
-description = "Liquidity Pool with constant fixed price rate strategy"
+description = "Liquidity Pool"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "constant_lp"
+name = "simple_liquidity_pool"
 
 [features]
 no-entrypoint = []
@@ -17,3 +17,4 @@ default = []
 
 [dependencies]
 anchor-lang = "0.26.0"
+anchor-spl = "0.26.0"
