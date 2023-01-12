@@ -7,16 +7,16 @@ pub struct FixedRateLP {
   /// 1 base = ? quote
   /// if 1 base = 10 quote then rate = 10,000 because of RATE_DECIMAL=3
   /// max rate = 2^(32-RATE_DECIMAL)
-  rate: u32,            // 4
-  token_base: Pubkey,   // 32
-  token_quote: Pubkey,  // 32
-  amount_base_ata: Pubkey,  // 32
-  amount_quote_ata: Pubkey, // 32
+  pub rate: u32,            // 4
+  pub token_base: Pubkey,   // 32
+  pub token_quote: Pubkey,  // 32
+  pub amount_base_ata: Pubkey,  // 32
+  pub amount_quote_ata: Pubkey, // 32
 
   // NOTE: At this time: we read balance inside amount_base_ATA as the single source of truth
   // For better performance, need another complex implementation, such as cache the balance here
-  // amount_base: u128,    // 16: current base token amount in this pool
-  // amount_quote: u128,   // 16
+  // pub amount_base: u128,    // 16: current base token amount in this pool
+  // pub amount_quote: u128,   // 16
 
   // profit tracking for all liquidity provider: Ignore this feature
 }
@@ -81,10 +81,11 @@ impl FixedRateLP {
     Ok(())
   }
 
-  pub fn add_liquidity(&mut self, token_base_amount: u128, token_quote_amount: u128) -> Result<()> {
+  pub fn add_liquidity(&mut self, token_base_amount: u64, token_quote_amount: u64) -> Result<()> {
     require_gte!(token_base_amount, 0, LpBaseError::InvalidAmount);
     require_gte!(token_quote_amount, 0, LpBaseError::InvalidAmount);
 
+    // TODO: Validate current amount over upper range of u64
     // self.amount_base += token_base_amount;
     // self.amount_quote += token_quote_amount;
 
@@ -98,7 +99,7 @@ impl FixedRateLP {
   ///   fee: the fee deducted on to_amount,
   /// )
   ///
-  pub fn get_swap_data(&mut self, from_token: Pubkey, to_token: Pubkey, from_amount: u128) -> Result<(u128, u128, u128)> {
+  pub fn get_swap_data(&mut self, from_token: Pubkey, to_token: Pubkey, from_amount: u64) -> Result<(u64, u64, u64)> {
     require_gt!(from_amount, 0, LpBaseError::InvalidSwapAmount);
 
     let swap_direction = self.get_swap_dir(from_token, to_token);
@@ -109,19 +110,19 @@ impl FixedRateLP {
 
     let to_amount = match swap_dir {
       SwapDir::BaseToQuote => {
-        let to_amount = from_amount * self.rate as u128;
+        let to_amount = from_amount * self.rate as u64;
         require!(to_amount <= amount_quote, LpBaseError::InsufficientQuoteAmount);
         to_amount
       },
       SwapDir::QuoteToBase => {
-        let to_amount = from_amount / self.rate as u128;
+        let to_amount = from_amount / self.rate as u64;
         require!(to_amount <= amount_base, LpBaseError::InsufficientBaseAmount);
         to_amount
       }
     };
 
     let fee = FixedRateLP::get_swap_fee(to_amount);
-    require!(to_amount - fee <= 2_u128.pow(128), LpBaseError::LargeSwapAmount);
+    require!(to_amount - fee <= 2_u64.pow(64), LpBaseError::LargeSwapAmount);
 
 
     // swap
@@ -140,12 +141,12 @@ impl FixedRateLP {
     Ok((from_amount, to_amount, fee))
   }
 
-  fn get_swap_fee(to_amount: u128) -> u128 {
-    return to_amount * (LP_SWAP_FEE_PERMIL as u128) / 1000;
+  fn get_swap_fee(to_amount: u64) -> u64 {
+    return to_amount * (LP_SWAP_FEE_PERMIL as u64) / 1000;
   }
 
   /// @return (current_base_amount_available, current_quote_amount_available)
-  fn get_current_liquidity() -> (u128, u128) {
+  fn get_current_liquidity() -> (u64, u64) {
     return (0, 0);
     // todo!()
   }

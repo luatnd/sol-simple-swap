@@ -8,7 +8,7 @@ use crate::state::{FixedRateLP, LP_SEED_PREFIX};
 
 pub fn init(ctx: Context<LpInit>, fixed_rate: u32) -> Result<()> {
   let lp = &mut ctx.accounts.liquidity_pool;
-  msg!("Initializing liquidity pool {:?}", lp);
+  // msg!("Initializing liquidity pool {:?}", lp);
 
   lp.init(
     ctx.accounts.token_base.key(),
@@ -38,9 +38,9 @@ pub struct LpInit<'info> {
   pub liquidity_pool: Account<'info, FixedRateLP>,
 
   // base Token Mint Address: Read more in README.md
-  #[account(mut)]
+  #[account()]
   pub token_base: Account<'info, token::Mint>,
-  #[account(mut)]
+  #[account()]
   pub token_quote: Account<'info, token::Mint>,
 
   #[account(
