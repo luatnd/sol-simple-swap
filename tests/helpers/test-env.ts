@@ -41,8 +41,12 @@ export function getTestTokenMetadata() {
   };
 }
 
-export function getProgramConstant(constant_name: string, program): string {
-  const constants = program.idl.constants.filter(i => i.name === constant_name);
+export function getProgramConstant<T extends Idl>(constant_name: string, program: Program<T>): string {
+  return getProgramIdlConstant(constant_name, program.idl);
+}
+
+export function getProgramIdlConstant(constant_name: string, idl: anchor.Idl): string {
+  const constants = idl.constants.filter(i => i.name === constant_name);
   if (constants[0]) {
     return constants[0].value;
   }
