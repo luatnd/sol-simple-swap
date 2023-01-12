@@ -24,6 +24,8 @@ pub struct FixedRateLP {
 
   // NOTE: base token is hardcoded to be native SOL
   pub token_base: Pubkey,   // 32
+
+  // Use pool address to store base token SOL
   // pub amount_base_ata: Pubkey,  // 32
 
   pub token_quote: Pubkey,  // 32
@@ -59,7 +61,7 @@ pub const LP_SWAP_FEE_PERMIL: u8 = 30; // 25/1000 = 2.5%
 
 impl FixedRateLP {
   // pub const SEED_PREFIX: &'static [u8] = b"FixedRateLP_";
-  pub const MAXIMUM_SIZE: usize = 4 + 32 + 32 + 32 + 32;// + 16 + 16;
+  pub const MAXIMUM_SIZE: usize = 4 + 32 + 32 + 32;
 
 
   pub fn get_swap_dir(&self, from_token: Pubkey, to_token: Pubkey) -> Option<SwapDir> {

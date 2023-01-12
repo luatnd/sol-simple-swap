@@ -123,8 +123,8 @@ async function init_new_lp(
     owner: liquidityPoolPubKey
   });
 
-  const fixedRate = 10 * Math.pow(10, LP_RATE_DECIMAL);
-  const tx = await program.methods.initialize(fixedRate)
+  const fixedRateDecimal = 10;
+  const tx = await program.methods.initialize(fixedRateDecimal * Math.pow(10, LP_RATE_DECIMAL))
     .accounts({
       liquidityPool: liquidityPoolPubKey,
       // tokenBase: base,

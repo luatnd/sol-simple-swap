@@ -21,13 +21,15 @@ pub mod simple_liquidity_pool {
   }
 
   // pub fn swap(ctx: Context<Tmp>) -> Result<()> {
-  //   Ok(())
+  //   todo!()
   // }
-
-  // pub fn withdraw_liquidity(from: Token, to: Token, fromAmount: int) -> Result<()> {
-  //   Ok(())
+  //
+  // pub fn withdraw_liquidity(ctx: Context<LpAddLiquidity>, base_amount: u64, quote_amount: u64) -> Result<()> {
+  //   todo!()
   // }
-
-  // pub fn destruct(from: Token, to: Token, fromAmount: int) -> Result<()> {
+  //
+  // pub fn destruct(ctx: Context<Tmp>, from: Token, to: Token, fromAmount: int) -> Result<()> {
+  //   todo!()
+  // }
 
 }
