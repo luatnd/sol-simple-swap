@@ -1,16 +1,32 @@
 use anchor_lang::prelude::*;
 use crate::state::{errors::*, SwapDir};
 
-#[derive(Debug)]
+///
+/// this LP is for <Sol, SplToken>
+/// base token is hard coded to SOL
+/// If we need to swap <Sol/SplToken, Sol/SplToken>,
+/// We need to use Wrapped Sol,
+/// which is not a requirement of this test
+/// So I skip it for now
+///
+/// Base: SOL
+/// Quote: SPL token
+///
+/// Base,Quote is a term in trading that represents the BASE/QUOTE trading pair
+///
 #[account]
+#[derive(Default)]
 pub struct FixedRateLP {
   /// 1 base = ? quote
   /// if 1 base = 10 quote then rate = 10,000 because of RATE_DECIMAL=3
   /// max rate = 2^(32-RATE_DECIMAL)
   pub rate: u32,            // 4
+
+  // NOTE: base token is hardcoded to be native SOL
   pub token_base: Pubkey,   // 32
+  // pub amount_base_ata: Pubkey,  // 32
+
   pub token_quote: Pubkey,  // 32
-  pub amount_base_ata: Pubkey,  // 32
   pub amount_quote_ata: Pubkey, // 32
 
   // NOTE: At this time: we read balance inside amount_base_ATA as the single source of truth
@@ -63,8 +79,10 @@ impl FixedRateLP {
 impl FixedRateLP {
   pub fn init(
     &mut self,
-    token_base: Pubkey, token_quote: Pubkey,
-    amount_base_ata: Pubkey, amount_quote_ata: Pubkey,
+    token_base: Pubkey,
+    token_quote: Pubkey,
+    // amount_base_ata: Pubkey,
+    amount_quote_ata: Pubkey,
     fixed_rate: u32
   ) -> Result<()> {
     require_gt!(fixed_rate, 0, LpBaseError::InvalidRate);
@@ -73,7 +91,7 @@ impl FixedRateLP {
     self.rate = fixed_rate;
     self.token_base = token_base;
     self.token_quote = token_quote;
-    self.amount_base_ata = amount_base_ata;
+    // self.amount_base_ata = amount_base_ata;
     self.amount_quote_ata = amount_quote_ata;
     // self.amount_base = 0;
     // self.amount_quote = 0;

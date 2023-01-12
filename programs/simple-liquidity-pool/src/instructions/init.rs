@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
   token,
+  token::spl_token,
   associated_token,
 };
 use crate::state::{FixedRateLP, LP_SEED_PREFIX};
@@ -11,9 +12,9 @@ pub fn init(ctx: Context<LpInit>, fixed_rate: u32) -> Result<()> {
   // msg!("Initializing liquidity pool {:?}", lp);
 
   lp.init(
-    ctx.accounts.token_base.key(),
+    spl_token::native_mint::id(),
     ctx.accounts.token_quote.key(),
-    ctx.accounts.base_ata.key(),
+    // ctx.accounts.base_ata.key(),
     ctx.accounts.quote_ata.key(),
     fixed_rate,
   )?;
@@ -24,13 +25,14 @@ pub fn init(ctx: Context<LpInit>, fixed_rate: u32) -> Result<()> {
 
 #[derive(Accounts)]
 pub struct LpInit<'info> {
+  // Can be hacked? because public auth here
   #[account(
     init,
     payer = authority,
     space = 8 + FixedRateLP::MAXIMUM_SIZE,
     seeds = [
       LP_SEED_PREFIX,
-      token_base.key().as_ref(),
+      // token_base.key().as_ref(),
       token_quote.key().as_ref()
     ],
     bump,
@@ -38,18 +40,18 @@ pub struct LpInit<'info> {
   pub liquidity_pool: Account<'info, FixedRateLP>,
 
   // base Token Mint Address: Read more in README.md
-  #[account()]
-  pub token_base: Account<'info, token::Mint>,
+  // #[account()]
+  // pub token_base: Account<'info, token::Mint>,
   #[account()]
   pub token_quote: Account<'info, token::Mint>,
 
-  #[account(
-    init,
-    payer = authority,
-    associated_token::mint = token_base,
-    associated_token::authority = liquidity_pool,
-  )]
-  pub base_ata: Account<'info, token::TokenAccount>,
+  // #[account(
+  //   init,
+  //   payer = authority,
+  //   associated_token::mint = token_base,
+  //   associated_token::authority = liquidity_pool,
+  // )]
+  // pub base_ata: Account<'info, token::TokenAccount>,
   #[account(
     init,
     payer = authority,

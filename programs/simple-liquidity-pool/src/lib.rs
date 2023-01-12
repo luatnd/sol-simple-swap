@@ -16,10 +16,10 @@ pub mod simple_liquidity_pool {
     init::init(ctx, fixed_rate)
   }
 
-  // pub fn add_liquidity(ctx: Context<Tmp>) -> Result<()> {
-  //   Ok(())
-  // }
-  //
+  pub fn add_liquidity(ctx: Context<LpAddLiquidity>, base_amount: u64, quote_amount: u64) -> Result<()> {
+    add_lp::add_liquidity(ctx, base_amount, quote_amount)
+  }
+
   // pub fn swap(ctx: Context<Tmp>) -> Result<()> {
   //   Ok(())
   // }
