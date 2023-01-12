@@ -12,7 +12,7 @@ import {airDropSolIfBalanceLowerThan} from "../../../../tests/helpers/token";
 export default function test__init(program: Program<SimpleLiquidityPool>) {
   // NOTE: This test must run only once per liquidity pair// TODO: Uncomment this to test init new LP, run only once
   // TODO: Uncomment this to test init new LP, run only once
-  // it("can init lp and can init only once", async () => test_init_lp_only_once(program));
+  it("can init lp and can init only once", async () => test_init_lp_only_once(program));
 
   it("Other wallet cannot init same pair", async () => test_reinit_lp_by_other_wallet(program));
 }
@@ -28,12 +28,13 @@ async function test_init_lp_only_once(program: Program<SimpleLiquidityPool>) {
 
   const wallet = getProviderWallet();
 
-  const tokenBasePubKey = NATIVE_MINT;  // Sol
+  // const tokenBasePubKey = NATIVE_MINT;  // Sol
   const prevMintToken = getPrevMintTokenInfoFromTmpData(); // This test must run after mint test; Test run async but mochajs test case will run once by one
   const tokenQuotePubKey = new anchor.web3.PublicKey(prevMintToken.mintKeypair.publicKey)
   const {tx, liquidityPoolPubKey} = await init_new_lp(
     program,
-    tokenBasePubKey, tokenQuotePubKey,
+    // tokenBasePubKey,
+    tokenQuotePubKey,
     wallet.payer,
   );
   assert(!!tx, "Tx should not be empty");
@@ -42,7 +43,8 @@ async function test_init_lp_only_once(program: Program<SimpleLiquidityPool>) {
   try {
     const {tx} = await init_new_lp(
       program,
-      tokenBasePubKey, tokenQuotePubKey,
+      // tokenBasePubKey,
+      tokenQuotePubKey,
       wallet.payer,
     );
     tx2 = tx;
@@ -56,7 +58,7 @@ async function test_init_lp_only_once(program: Program<SimpleLiquidityPool>) {
 
   // Account must be created
   const lpAccount = await program.account.fixedRateLp.fetch(liquidityPoolPubKey);
-  expect(lpAccount.amountBaseAta.toBase58()).to.has.lengthOf(44);
+  expect(lpAccount.amountQuoteAta.toBase58()).to.has.length.gt(0);
 }
 
 async function test_reinit_lp_by_other_wallet(program: Program<SimpleLiquidityPool>) {
@@ -66,7 +68,7 @@ async function test_reinit_lp_by_other_wallet(program: Program<SimpleLiquidityPo
   const walletKeyPair = anchor.web3.Keypair.generate();
   await airDropSolIfBalanceLowerThan(0.1, walletKeyPair.publicKey);
 
-  const tokenBasePubKey = NATIVE_MINT;  // Sol
+  // const tokenBasePubKey = NATIVE_MINT;  // Sol
   const prevMintToken = getPrevMintTokenInfoFromTmpData(); // This test must run after mint test; Test run async but mochajs test case will run once by one
   const tokenQuotePubKey = new anchor.web3.PublicKey(prevMintToken.mintKeypair.publicKey)
 
@@ -74,7 +76,8 @@ async function test_reinit_lp_by_other_wallet(program: Program<SimpleLiquidityPo
   try {
     const {tx} = await init_new_lp(
       program,
-      tokenBasePubKey, tokenQuotePubKey,
+      // tokenBasePubKey,
+      tokenQuotePubKey,
       walletKeyPair,
     );
     tx2 = tx;
@@ -89,7 +92,7 @@ async function test_reinit_lp_by_other_wallet(program: Program<SimpleLiquidityPo
 
 async function init_new_lp(
   program: Program<SimpleLiquidityPool>,
-  base: anchor.web3.PublicKey,
+  // base: anchor.web3.PublicKey,
   quote: anchor.web3.PublicKey,
   authority: anchor.web3.Keypair,
 ) {
@@ -104,17 +107,17 @@ async function init_new_lp(
   const [liquidityPoolPubKey] = (anchor.web3.PublicKey.findProgramAddressSync(
     [
       LP_SEED_PREFIX,
-      base.toBuffer(),
+      // base.toBuffer(),
       quote.toBuffer(),
     ],
     program.programId
   ))
   console.log('{init_new_lp} liquidityPoolPubKey: ', liquidityPoolPubKey.toString());
 
-  const baseAta = await anchor.utils.token.associatedAddress({
-    mint: base,
-    owner: liquidityPoolPubKey
-  });
+  // const baseAta = await anchor.utils.token.associatedAddress({
+  //   mint: base,
+  //   owner: liquidityPoolPubKey
+  // });
   const quoteAta = await anchor.utils.token.associatedAddress({
     mint: quote,
     owner: liquidityPoolPubKey
@@ -124,9 +127,9 @@ async function init_new_lp(
   const tx = await program.methods.initialize(fixedRate)
     .accounts({
       liquidityPool: liquidityPoolPubKey,
-      tokenBase: base,
+      // tokenBase: base,
       tokenQuote: quote,
-      baseAta: baseAta,
+      // baseAta: baseAta,
       quoteAta: quoteAta,
       authority: authority.publicKey,
       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
