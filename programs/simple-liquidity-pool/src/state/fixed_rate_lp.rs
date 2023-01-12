@@ -69,7 +69,7 @@ pub const LP_RATE_DECIMAL: u8 = 3;
 
 /// Swap fee will be deducted directly on to_amount, not from_amount
 #[constant]
-pub const LP_SWAP_FEE_PERMIL: u8 = 30; // 25/1000 = 2.5%
+pub const LP_SWAP_FEE_PERMIL: u8 = 50; // 50/1000 = 5.0%
 
 impl FixedRateLP {
   // pub const SEED_PREFIX: &'static [u8] = b"FixedRateLP_";
@@ -132,44 +132,43 @@ impl FixedRateLP {
   ///   fee: the fee deducted on to_amount,
   /// )
   ///
-  pub fn get_swap_data(&mut self, from_token: Pubkey, to_token: Pubkey, from_amount: u64) -> Result<(SwapDir, u64, u64, u64)> {
+  pub fn preview_swap(
+    &mut self,
+    from_token: Pubkey,
+    to_token: Pubkey,
+    from_amount: u64,
+    current_base_liquidity: u64,
+    current_quote_liquidity: u64,
+  ) -> Result<(SwapDir, u64, u64, u64)> {
     require_gt!(from_amount, 0, LpBaseError::InvalidSwapAmount);
 
     let swap_direction = self.get_swap_dir(from_token, to_token);
     require!(swap_direction.is_some(), LpBaseError::InvalidSwapToken);
 
     let swap_dir = swap_direction.unwrap();
-    let (amount_base, amount_quote) = FixedRateLP::get_current_liquidity();
+    // let (current_base_liquidity, current_quote_liquidity) = FixedRateLP::get_current_liquidity();
+
+    let verbose = false;
+    if verbose { msg!("[preview_swap] current base, quote liquidity: {}, {}", current_base_liquidity, current_quote_liquidity); }
+
+    let rate: f64 = self.rate as f64 / 1000_f64;
+    if verbose { msg!("[preview_swap] rate: {}", rate); }
 
     let to_amount = match swap_dir {
       SwapDir::BaseToQuote => {
-        let to_amount = from_amount * self.rate as u64;
-        require!(to_amount <= amount_quote, LpBaseError::InsufficientQuoteAmount);
+        let to_amount = (from_amount as f64 * rate) as u64;
+        require!(to_amount <= current_quote_liquidity, LpBaseError::InsufficientQuoteAmount);
         to_amount
       },
       SwapDir::QuoteToBase => {
-        let to_amount = from_amount / self.rate as u64;
-        require!(to_amount <= amount_base, LpBaseError::InsufficientBaseAmount);
+        let to_amount = (from_amount as f64 / rate) as u64;
+        require!(to_amount <= current_base_liquidity, LpBaseError::InsufficientBaseAmount);
         to_amount
       }
     };
+    if verbose { msg!("[preview_swap] to_amount: {}", to_amount); }
 
     let fee = FixedRateLP::get_swap_fee(to_amount);
-    require!(to_amount - fee <= 2_u64.pow(64), LpBaseError::LargeSwapAmount);
-
-
-    // swap
-    // let (mut lp_base_change, mut lp_quote_change): (i128, i128) = (0_i128, 0_i128);
-    // match swap_dir {
-    //   SwapDir::BaseToQuote => {
-    //     lp_base_change = from_amount as i128;           // in
-    //     lp_quote_change = -((to_amount + fee) as i128); // out
-    //   },
-    //   SwapDir::QuoteToBase => {
-    //     lp_base_change = -((to_amount - fee) as i128); // out
-    //     lp_quote_change = from_amount as i128;         // in
-    //   }
-    // };
 
     Ok((swap_dir, from_amount, to_amount, fee))
   }
@@ -178,13 +177,20 @@ impl FixedRateLP {
     return to_amount * (LP_SWAP_FEE_PERMIL as u64) / 1000;
   }
 
-  /// @return (current_base_amount_available, current_quote_amount_available)
-  fn get_current_liquidity() -> (u64, u64) {
-    return (0, 0);
-    // todo!()
-  }
+  // /// @return (current_base_amount_available, current_quote_amount_available)
+  // fn get_current_liquidity() -> (u64, u64) {
+  //   return (0, 0);
+  //   // todo!()
+  // }
 }
 
+
+// pub fn get_current_pool_liquidity<'info>(ctx: &Context<LpAddLiquidity<'info>>) -> Result<(u64, u64)> {
+//   let current_base_liquidity: u64 = ctx.accounts.liquidity_pool.to_account_info().lamports();
+//   let current_quote_liquidity: u64 = ctx.accounts.quote_ata.amount;
+//
+//   Ok((current_base_liquidity, current_quote_liquidity))
+// }
 
 ///
 /// Transfer token from user wallet into pool
@@ -240,7 +246,7 @@ pub fn transfer_token_out_of_pool<'info>(
   for_token: Pubkey,
   amount: u64,
 ) -> Result<()> {
-  msg!("[transfer_token_into_pool] Transferring {} {} tokens ...", amount, for_token.key().to_string());
+  msg!("[transfer_token_out_of_pool] Transferring {} {} tokens ...", amount, for_token.key().to_string());
 
   let is_native_and_base_token = for_token == spl_token::native_mint::id();
 
