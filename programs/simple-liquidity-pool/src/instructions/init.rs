@@ -4,7 +4,7 @@ use anchor_spl::{
   token::spl_token,
   associated_token,
 };
-use crate::state::{FixedRateLP, LP_SEED_PREFIX};
+use crate::state::{FixedRateLP, FixedRateLpFee, LP_SEED_PREFIX, LP_FEE_SEED_PREFIX};
 
 
 pub fn init(ctx: Context<LpInit>, fixed_rate: u32) -> Result<()> {
@@ -39,6 +39,15 @@ pub struct LpInit<'info> {
   )]
   pub liquidity_pool: Account<'info, FixedRateLP>,
 
+  #[account(
+    init,
+    payer = authority,
+    space = 8 + 0,
+    seeds = [LP_FEE_SEED_PREFIX, token_quote.key().as_ref()],
+    bump,
+  )]
+  pub liquidity_pool_fee: Account<'info, FixedRateLpFee>,
+
   // base Token Mint Address: Read more in README.md
   // #[account()]
   // pub token_base: Account<'info, token::Mint>,
@@ -59,6 +68,14 @@ pub struct LpInit<'info> {
     associated_token::authority = liquidity_pool,
   )]
   pub quote_ata: Account<'info, token::TokenAccount>,
+
+  #[account(
+    init,
+    payer = authority,
+    associated_token::mint = token_quote,
+    associated_token::authority = liquidity_pool_fee,
+  )]
+  pub fee_ata: Account<'info, token::TokenAccount>,
 
 
   #[account(mut)]

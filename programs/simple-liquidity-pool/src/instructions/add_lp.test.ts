@@ -25,6 +25,9 @@ async function test___add_liquidity_to_exist_lp(program: Program<SimpleLiquidity
   const LP_SEED_PREFIX_RAW = getProgramConstant("LP_SEED_PREFIX", program);
   const LP_SEED_PREFIX = Buffer.from(JSON.parse(LP_SEED_PREFIX_RAW), "utf8");
   expect(LP_SEED_PREFIX).is.not.empty;
+  const LP_FEE_SEED_PREFIX_RAW = getProgramConstant("LP_FEE_SEED_PREFIX", program);
+  const LP_FEE_SEED_PREFIX = Buffer.from(JSON.parse(LP_FEE_SEED_PREFIX_RAW), "utf8");
+  expect(LP_SEED_PREFIX).is.not.empty;
   const LP_RATE_DECIMAL_RAW = getProgramConstant("LP_RATE_DECIMAL", program);
   expect(LP_RATE_DECIMAL_RAW).to.be.not.null;
   const LP_RATE_DECIMAL = parseInt(LP_RATE_DECIMAL_RAW);
@@ -45,6 +48,13 @@ async function test___add_liquidity_to_exist_lp(program: Program<SimpleLiquidity
     ],
     program.programId
   ))
+  const [liquidityPoolFeePubKey] = (anchor.web3.PublicKey.findProgramAddressSync(
+    [
+      LP_FEE_SEED_PREFIX,
+      tokenQuotePubKey.toBuffer(),
+    ],
+    program.programId
+  ))
 
   // const baseAta = await anchor.utils.token.associatedAddress({
   //   mint: tokenBasePubKey,
@@ -53,6 +63,10 @@ async function test___add_liquidity_to_exist_lp(program: Program<SimpleLiquidity
   const quoteAta = await anchor.utils.token.associatedAddress({
     mint: tokenQuotePubKey,
     owner: liquidityPoolPubKey
+  });
+  const feeAta = await anchor.utils.token.associatedAddress({
+    mint: tokenQuotePubKey,
+    owner: liquidityPoolFeePubKey
   });
   // const userBaseAta = await anchor.utils.token.associatedAddress({
   //   mint: tokenBasePubKey,
@@ -81,6 +95,8 @@ async function test___add_liquidity_to_exist_lp(program: Program<SimpleLiquidity
   )
     .accounts({
       liquidityPool: liquidityPoolPubKey,
+      liquidityPoolFee: liquidityPoolFeePubKey,
+      feeAta: feeAta,
       // tokenBase: tokenBasePubKey,
       tokenQuote: tokenQuotePubKey,
       // baseAta: baseAta,

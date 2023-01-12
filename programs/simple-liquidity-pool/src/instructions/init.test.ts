@@ -12,7 +12,7 @@ import {airDropSolIfBalanceLowerThan} from "../../../../tests/helpers/token";
 export default function test__init(program: Program<SimpleLiquidityPool>) {
   // NOTE: This test must run only once per liquidity pair// TODO: Uncomment this to test init new LP, run only once
   // TODO: Uncomment this to test init new LP, run only once
-  it("can init lp and can init only once", async () => test_init_lp_only_once(program));
+  // it("can init lp and can init only once", async () => test_init_lp_only_once(program));
 
   it("Other wallet cannot init same pair", async () => test_reinit_lp_by_other_wallet(program));
 }
@@ -99,6 +99,9 @@ async function init_new_lp(
   const LP_SEED_PREFIX_RAW = getProgramConstant("LP_SEED_PREFIX", program);
   const LP_SEED_PREFIX = Buffer.from(JSON.parse(LP_SEED_PREFIX_RAW), "utf8");
   expect(LP_SEED_PREFIX).is.not.empty;
+  const LP_FEE_SEED_PREFIX_RAW = getProgramConstant("LP_FEE_SEED_PREFIX", program);
+  const LP_FEE_SEED_PREFIX = Buffer.from(JSON.parse(LP_FEE_SEED_PREFIX_RAW), "utf8");
+  expect(LP_SEED_PREFIX).is.not.empty;
   const LP_RATE_DECIMAL_RAW = getProgramConstant("LP_RATE_DECIMAL", program);
   expect(LP_RATE_DECIMAL_RAW).to.be.not.null;
   const LP_RATE_DECIMAL = parseInt(LP_RATE_DECIMAL_RAW);
@@ -112,7 +115,14 @@ async function init_new_lp(
     ],
     program.programId
   ))
-  console.log('{init_new_lp} liquidityPoolPubKey: ', liquidityPoolPubKey.toString());
+  const [liquidityPoolFeePubKey] = (anchor.web3.PublicKey.findProgramAddressSync(
+    [
+      LP_FEE_SEED_PREFIX,
+      quote.toBuffer(),
+    ],
+    program.programId
+  ))
+  console.log('{init_new_lp} liquidityPoolPubKey, FeePubKey: ', liquidityPoolPubKey.toString(), liquidityPoolFeePubKey.toString());
 
   // const baseAta = await anchor.utils.token.associatedAddress({
   //   mint: base,
@@ -122,11 +132,17 @@ async function init_new_lp(
     mint: quote,
     owner: liquidityPoolPubKey
   });
+  const feeAta = await anchor.utils.token.associatedAddress({
+    mint: quote,
+    owner: liquidityPoolFeePubKey
+  });
 
   const fixedRateDecimal = 10;
   const tx = await program.methods.initialize(fixedRateDecimal * Math.pow(10, LP_RATE_DECIMAL))
     .accounts({
       liquidityPool: liquidityPoolPubKey,
+      liquidityPoolFee: liquidityPoolFeePubKey,
+      feeAta: feeAta,
       // tokenBase: base,
       tokenQuote: quote,
       // baseAta: baseAta,

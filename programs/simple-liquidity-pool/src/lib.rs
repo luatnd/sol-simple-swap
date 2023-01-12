@@ -4,7 +4,7 @@ mod errors;
 
 use anchor_lang::prelude::*;
 use instructions::*; // Must import as * to avoid error
-
+use crate::state::SwapDir;
 
 declare_id!("GMDA6SqHUFzctniBczeBSsoLEfd3HaW161wwyAms2buL");
 
@@ -20,10 +20,15 @@ pub mod simple_liquidity_pool {
     add_lp::add_liquidity(ctx, base_amount, quote_amount)
   }
 
-  // pub fn swap(ctx: Context<Tmp>) -> Result<()> {
-  //   todo!()
-  // }
-  //
+  pub fn swap(
+    ctx: Context<LpAddLiquidity>,
+    from: Pubkey,
+    to: Pubkey,
+    from_amount: u64,
+  ) -> Result<()> {
+    swap::swap(ctx, from, to, from_amount)
+  }
+
   // pub fn withdraw_liquidity(ctx: Context<LpAddLiquidity>, base_amount: u64, quote_amount: u64) -> Result<()> {
   //   todo!()
   // }
