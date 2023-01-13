@@ -7,6 +7,7 @@ import {assert, expect} from "chai";
 import {getPrevMintTokenInfoFromTmpData} from "../../../move-token/src/instructions/create_token.test";
 import {Keypair, PublicKey} from "@solana/web3.js";
 import {NATIVE_MINT} from "@solana/spl-token";
+import {add_liquidity_to_exist_lp} from "./add_lp.test";
 
 
 export default function test__swap(program: Program<SimpleLiquidityPool>) {
@@ -22,10 +23,16 @@ async function test__swap_sol_to_token(program: Program<SimpleLiquidityPool>) {
   const prevMintToken = getPrevMintTokenInfoFromTmpData(); // This test must run after mint test; Test run async but mochajs test case will run once by one
   const myTokenPubKey = new anchor.web3.PublicKey(prevMintToken.mintKeypair.publicKey)
 
+  // For dev cycle only: Might add some liquidity first if NEEDED
+  // await add_liquidity_to_exist_lp(program, {
+  //   solAmount: 3,
+  //   tokenAmount: 40,
+  // })
+
   return test__swap_token(program, {
     from: NATIVE_MINT,
     to: myTokenPubKey,
-    fromAmount: 0.12345,
+    fromAmount: 0.0512345,
     payer: wallet.payer,
   });
 }
@@ -111,18 +118,20 @@ async function test__swap_token(program: Program<SimpleLiquidityPool>, option: {
     - LP inc fromAmount of token
     - LP FEE inc % of `LP dec` in SOL: +x SOL, +0 Token
    */
+  // NOTE: This fee logic must sync with Smart contract
+  const swap_fee = (toAmount) => toAmount * (LP_SWAP_FEE_PERMIL / 1000);
   const changeMatrix = {
     // [Sol change, token change, fee Sol change, fee token change]
     baseToQuote: [
       +fromAmount,
-      -fromAmount * PRICE_RATE,
+      -(fromAmount * PRICE_RATE - swap_fee(fromAmount * PRICE_RATE)),
       0,
-      -fromAmount * PRICE_RATE * (LP_SWAP_FEE_PERMIL / 1000),
+      swap_fee(fromAmount * PRICE_RATE),
     ],
     quoteToBase: [
-      -fromAmount / PRICE_RATE,
+      -(fromAmount / PRICE_RATE - swap_fee(fromAmount / PRICE_RATE)),
       +fromAmount,
-      -fromAmount / PRICE_RATE * (LP_SWAP_FEE_PERMIL / 1000),
+      swap_fee(fromAmount / PRICE_RATE),
       0,
     ],
   }
@@ -133,7 +142,12 @@ async function test__swap_token(program: Program<SimpleLiquidityPool>, option: {
   const quoteIncAmount = v(1) * Math.pow(10, TOKEN_DECIMAL);
   const baseFeeIncAmount = v(2) * Math.pow(10, NATIVE_SOL_DECIMAL);
   const quoteFeeIncAmount = v(3) * Math.pow(10, TOKEN_DECIMAL);
-
+  VERBOSE && console.log('{test__swap_token} {}: ', {
+    baseIncAmount,
+    quoteIncAmount,
+    baseFeeIncAmount,
+    quoteFeeIncAmount,
+  });
 
 
   const [liquidityPoolPubKey] = (anchor.web3.PublicKey.findProgramAddressSync(
@@ -177,7 +191,6 @@ async function test__swap_token(program: Program<SimpleLiquidityPool>, option: {
   lpBalances.before.quote = new anchor.BN((await provider.connection.getTokenAccountBalance(quoteAta)).value.amount).toNumber();
   lpFeeBalances.before.base = await provider.connection.getBalance(liquidityPoolFeePubKey);
   lpFeeBalances.before.quote = new anchor.BN((await provider.connection.getTokenAccountBalance(feeAta)).value.amount).toNumber();
-  // console.log('{test__swap_token} lpBalances before: ', lpBalances);
 
   VERBOSE && console.log('{test__swap_token} : ', {
     liquidityPoolPubKey: liquidityPoolPubKey.toString(),
@@ -207,7 +220,8 @@ async function test__swap_token(program: Program<SimpleLiquidityPool>, option: {
       tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
       associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
     })
-    .signers([payer])
+    .signers([])
+    // .signers([payer])
     .rpc()
     .catch(e => {
       VERBOSE && console.log('Error: ', e); // show on-chain logs
@@ -221,11 +235,11 @@ async function test__swap_token(program: Program<SimpleLiquidityPool>, option: {
   lpFeeBalances.after.quote = new anchor.BN((await provider.connection.getTokenAccountBalance(feeAta)).value.amount).toNumber();
 
   // lpBalances must increase
-  // console.log('{test__swap_token} lpBalances after: ', lpBalances);
-  expect(lpBalances.after.base).to.be.eq(lpBalances.before.base + baseIncAmount);
-  expect(lpBalances.after.quote).to.be.eq(lpBalances.before.quote + quoteIncAmount);
-  expect(lpFeeBalances.after.base).to.be.eq(lpFeeBalances.before.base + baseFeeIncAmount);
-  expect(lpFeeBalances.after.quote).to.be.eq(lpFeeBalances.before.quote + quoteFeeIncAmount);
+  VERBOSE && console.log('{test__swap_token} lpBalances & fee after: ', lpBalances, lpFeeBalances);
+  expect(lpBalances.after.base).to.be.approximately(lpBalances.before.base + baseIncAmount, 1e6, `LP base balance must increase ${baseIncAmount}`);
+  expect(lpBalances.after.quote).to.be.approximately(lpBalances.before.quote + quoteIncAmount, 1e6, `LP quote balance must increase ${quoteIncAmount}`);
+  expect(lpFeeBalances.after.base).to.be.approximately(lpFeeBalances.before.base + baseFeeIncAmount, 1e6, `LP fee base balance must increase ${baseFeeIncAmount}`);
+  expect(lpFeeBalances.after.quote).to.be.approximately(lpFeeBalances.before.quote + quoteFeeIncAmount, 1e6, `LP fee quote balance must increase ${quoteFeeIncAmount}`);
 
   return tx;
 }

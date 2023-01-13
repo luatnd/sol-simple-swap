@@ -43,6 +43,9 @@ pub struct FixedRateLP {
   // pub amount_quote: u128,   // 16
 
   // profit tracking for all liquidity provider: Ignore this feature
+
+  // misc
+  pub bump: u8,                 // 1
 }
 
 
@@ -73,7 +76,7 @@ pub const LP_SWAP_FEE_PERMIL: u8 = 50; // 50/1000 = 5.0%
 
 impl FixedRateLP {
   // pub const SEED_PREFIX: &'static [u8] = b"FixedRateLP_";
-  pub const MAXIMUM_SIZE: usize = 4 + 32 + 32 + 32;
+  pub const MAXIMUM_SIZE: usize = 4 + 32 + 32 + 32 + 1;
 
 
   pub fn get_swap_dir(&self, from_token: Pubkey, to_token: Pubkey) -> Option<SwapDir> {
@@ -97,7 +100,8 @@ impl FixedRateLP {
     token_quote: Pubkey,
     // amount_base_ata: Pubkey,
     amount_quote_ata: Pubkey,
-    fixed_rate: u32
+    fixed_rate: u32,
+    bump: u8,
   ) -> Result<()> {
     require_gt!(fixed_rate, 0, LpBaseError::InvalidRate);
     require!(fixed_rate <= 2_u32.pow(32 - LP_RATE_DECIMAL as u32), LpBaseError::InvalidRate);
@@ -109,6 +113,8 @@ impl FixedRateLP {
     self.amount_quote_ata = amount_quote_ata;
     // self.amount_base = 0;
     // self.amount_quote = 0;
+
+    self.bump = bump;
 
     Ok(())
   }
@@ -264,14 +270,32 @@ pub fn transfer_token_out_of_pool<'info>(
     )
   } else {
     // case SPL token
+    let token_quote_pubkey = ctx.accounts.token_quote.key().clone();
+
+    let (auth, seed) = Pubkey::find_program_address(
+      &[
+        LP_SEED_PREFIX,
+        token_quote_pubkey.as_ref(),
+      ],
+      ctx.program_id,
+    );
+    msg!("[transfer_token_out_of_pool] auth: {}, seed {}", auth.key().to_string(), seed);
+
+    let signer_seeds: &[&[&[u8]]] = &[&[
+      LP_SEED_PREFIX,
+      token_quote_pubkey.as_ref(),
+      &[seed],
+    ]];
+
     token::transfer(
-      CpiContext::new(
+      CpiContext::new_with_signer(
         ctx.accounts.token_program.to_account_info(),
         token::Transfer {
           from: ctx.accounts.quote_ata.to_account_info(),
           to: ctx.accounts.user_quote_ata.to_account_info(),
           authority: ctx.accounts.liquidity_pool.to_account_info(),
         },
+        signer_seeds,
       ),
       amount,
     )

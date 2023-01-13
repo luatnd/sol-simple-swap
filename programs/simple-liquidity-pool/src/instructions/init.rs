@@ -11,12 +11,14 @@ pub fn init(ctx: Context<LpInit>, fixed_rate: u32) -> Result<()> {
   let lp = &mut ctx.accounts.liquidity_pool;
   // msg!("Initializing liquidity pool {:?}", lp);
 
+  let lp_bump = *ctx.bumps.get("liquidity_pool").unwrap();
   lp.init(
     spl_token::native_mint::id(),
     ctx.accounts.token_quote.key(),
     // ctx.accounts.base_ata.key(),
     ctx.accounts.quote_ata.key(),
     fixed_rate,
+    lp_bump,
   )?;
 
   Ok(())
@@ -32,7 +34,6 @@ pub struct LpInit<'info> {
     space = 8 + FixedRateLP::MAXIMUM_SIZE,
     seeds = [
       LP_SEED_PREFIX,
-      // token_base.key().as_ref(),
       token_quote.key().as_ref()
     ],
     bump,

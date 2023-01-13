@@ -3,7 +3,7 @@ import {getProvider, Program} from "@project-serum/anchor";
 import {SimpleLiquidityPool, IDL as SimpleLiquidityPoolIdl} from "../../../../target/types/simple_liquidity_pool";
 import {IDL as MoveTokenIdl} from "../../../../target/types/move_token";
 import {sleep} from "../../../../tests/helpers/time";
-import {getCurrentProvider, getProgramConstant, getProgramIdlConstant, getProviderWallet} from "../../../../tests/helpers/test-env";
+import {getCurrentProvider, getProgramConstant, getProgramIdlConstant, getProviderWallet, VERBOSE} from "../../../../tests/helpers/test-env";
 import {assert, expect} from "chai";
 import {NATIVE_MINT, NATIVE_MINT_2022} from "@solana/spl-token"
 import {getPrevMintTokenInfoFromTmpData} from "../../../move-token/src/instructions/create_token.test";
@@ -14,10 +14,21 @@ export default function test__add_liquidity(program: Program<SimpleLiquidityPool
 }
 
 async function test___add_liquidity_to_exist_lp(program: Program<SimpleLiquidityPool>) {
-  console.log('{test___add_liquidity_to_exist_lp} : ', Date.now());
-
-
+  const fixedRateDecimal = 10;
   const baseDepositAmount = 0.1;
+  return add_liquidity_to_exist_lp(program, {
+    solAmount: baseDepositAmount,
+    tokenAmount: baseDepositAmount * fixedRateDecimal,
+  })
+}
+
+export async function add_liquidity_to_exist_lp(program: Program<SimpleLiquidityPool>, option: {
+  solAmount: number,
+  tokenAmount: number,
+}) {
+  console.log('{test___add_liquidity_to_exist_lp} : ', Date.now());
+  const {solAmount: baseDepositAmount, tokenAmount: quoteDepositAmount} = option;
+
 
   const provider = getCurrentProvider();
   const wallet = getProviderWallet();
@@ -85,9 +96,8 @@ async function test___add_liquidity_to_exist_lp(program: Program<SimpleLiquidity
   lpBalances.before.quote = new anchor.BN((await provider.connection.getTokenAccountBalance(quoteAta)).value.amount).toNumber();
   // console.log('{test___add_liquidity_to_exist_lp} lpBalances before: ', lpBalances);
 
-  const fixedRateDecimal = 10;
   const baseAmount = baseDepositAmount * 1e9;
-  const quoteAmount = baseDepositAmount * fixedRateDecimal * Math.pow(10, TOKEN_DECIMAL);
+  const quoteAmount = quoteDepositAmount * Math.pow(10, TOKEN_DECIMAL);
 
   const tx = await program.methods.addLiquidity(
     new anchor.BN(baseAmount),  // Solana decimal is 9
@@ -121,7 +131,7 @@ async function test___add_liquidity_to_exist_lp(program: Program<SimpleLiquidity
   lpBalances.after.quote = new anchor.BN((await provider.connection.getTokenAccountBalance(quoteAta)).value.amount).toNumber();
 
   // lpBalances must increase
-  // console.log('{test___add_liquidity_to_exist_lp} lpBalances after: ', lpBalances);
+  VERBOSE && console.log('{test___add_liquidity_to_exist_lp} lpBalances after: ', lpBalances);
   expect(lpBalances.after.base).to.be.eq(lpBalances.before.base + baseAmount);
   expect(lpBalances.after.quote).to.be.eq(lpBalances.before.quote + quoteAmount);
 }

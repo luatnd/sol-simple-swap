@@ -22,15 +22,15 @@ pub fn add_liquidity(
 
 
 #[derive(Accounts)]
+#[instruction(lp_bump: u8)]
 pub struct LpAddLiquidity<'info> {
   #[account(
     mut,
     seeds = [
       LP_SEED_PREFIX,
-      // token_base.key().as_ref(),
       token_quote.key().as_ref()
     ],
-    bump,
+    bump = liquidity_pool.bump,
   )]
   pub liquidity_pool: Account<'info, FixedRateLP>,
 
@@ -53,7 +53,8 @@ pub struct LpAddLiquidity<'info> {
   pub quote_ata: Account<'info, token::TokenAccount>,
 
   #[account(
-    mut,
+    init_if_needed,
+    payer = authority,
     associated_token::mint = token_quote,
     associated_token::authority = authority,
   )]

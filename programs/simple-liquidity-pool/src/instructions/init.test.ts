@@ -2,7 +2,7 @@ import * as anchor from "@project-serum/anchor";
 import {Program} from "@project-serum/anchor";
 import {SimpleLiquidityPool, IDL as SimpleLiquidityPoolIdl} from "../../../../target/types/simple_liquidity_pool";
 import {sleep} from "../../../../tests/helpers/time";
-import {getProgramConstant, getProviderWallet} from "../../../../tests/helpers/test-env";
+import {getProgramConstant, getProviderWallet, VERBOSE} from "../../../../tests/helpers/test-env";
 import {assert, expect} from "chai";
 import {NATIVE_MINT, NATIVE_MINT_2022} from "@solana/spl-token"
 import {getPrevMintTokenInfoFromTmpData} from "../../../move-token/src/instructions/create_token.test";
@@ -12,7 +12,7 @@ import {airDropSolIfBalanceLowerThan} from "../../../../tests/helpers/token";
 export default function test__init(program: Program<SimpleLiquidityPool>) {
   // NOTE: This test must run only once per liquidity pair// TODO: Uncomment this to test init new LP, run only once
   // TODO: Uncomment this to test init new LP, run only once
-  // it("can init lp and can init only once", async () => test_init_lp_only_once(program));
+  it("can init lp and can init only once", async () => test_init_lp_only_once(program));
 
   it("Other wallet cannot init same pair", async () => test_reinit_lp_by_other_wallet(program));
 }
@@ -122,7 +122,7 @@ async function init_new_lp(
     ],
     program.programId
   ))
-  console.log('{init_new_lp} liquidityPoolPubKey, FeePubKey: ', liquidityPoolPubKey.toString(), liquidityPoolFeePubKey.toString());
+  VERBOSE && console.log('{init_new_lp} liquidityPoolPubKey, FeePubKey: ', liquidityPoolPubKey.toString(), liquidityPoolFeePubKey.toString());
 
   // const baseAta = await anchor.utils.token.associatedAddress({
   //   mint: base,
@@ -154,7 +154,11 @@ async function init_new_lp(
       associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
     })
     .signers([authority])
-    .rpc();
+    .rpc()
+    .catch(e => {
+      VERBOSE && console.log('Error: ', e); // show on-chain logs
+      throw e;
+    });
   console.log('{init_new_lp} tx: ', tx);
 
   return {

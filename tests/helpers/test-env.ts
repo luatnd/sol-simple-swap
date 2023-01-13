@@ -1,6 +1,8 @@
 import * as anchor from "@project-serum/anchor";
 import {AnchorProvider, Idl, Program} from "@project-serum/anchor";
 
+export const VERBOSE = true;
+
 export function getTestProgram<TProgram extends Idl>(program_name: string) {
   /**
    * The [provider] was configured in Anchor.toml

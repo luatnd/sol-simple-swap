@@ -21,7 +21,7 @@ pub mod simple_liquidity_pool {
   }
 
   pub fn swap(
-    ctx: Context<LpAddLiquidity>,
+    ctx: Context<LpSwap>,
     from: Pubkey,
     to: Pubkey,
     from_amount: u64,

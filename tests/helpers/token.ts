@@ -1,5 +1,7 @@
 import * as anchor from "@project-serum/anchor";
-import {getCurrentProvider} from "./test-env";
+import {createMint} from "@solana/spl-token";
+import {getCurrentProvider, getProviderWallet} from "./test-env";
+import fs from "fs";
 
 export async function airdropSOL(recipientPubKey: anchor.web3.PublicKey, amountOfSol: number) {
   // @deprecated

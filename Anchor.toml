@@ -5,6 +5,7 @@ skip-lint = false
 [programs.localnet]
 sol_swap_0 = "Eu6vMZ2QTe2XUSoEupWFwsDEX2yLxxuzGo7ZybycakQS"
 move_token = "CpCRu5ziJbffaFLxxY1gQPV2Lpyq8iBecLweZUH8Rngu"
+simple_liquidity_pool = "GMDA6SqHUFzctniBczeBSsoLEfd3HaW161wwyAms2buL"
 
 [programs.devnet]
 sol_swap_0 = "Eu6vMZ2QTe2XUSoEupWFwsDEX2yLxxuzGo7ZybycakQS"
