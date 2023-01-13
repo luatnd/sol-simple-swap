@@ -1,18 +1,18 @@
 import * as anchor from "@project-serum/anchor";
 import {Program} from "@project-serum/anchor";
 import {SimpleLiquidityPool} from "../../../../target/types/simple_liquidity_pool";
-import {IDL as MoveTokenIdl} from "../../../../target/types/move_token";
-import {getCurrentProvider, getProgramConstant, getProgramIdlConstant, getProviderWallet, VERBOSE} from "../../../../tests/helpers/test-env";
+import {getCurrentProvider, getProviderWallet, VERBOSE} from "../../../../tests/helpers/test-env";
 import {assert, expect} from "chai";
 import {getPrevMintTokenInfoFromTmpData} from "../../../move-token/src/instructions/create_token.test";
 import {Keypair, PublicKey} from "@solana/web3.js";
 import {NATIVE_MINT} from "@solana/spl-token";
 import {add_liquidity_to_exist_lp} from "./add_lp.test";
+import {getThisProgramConstants} from "./utils.test";
 
 
 export default function test__swap(program: Program<SimpleLiquidityPool>) {
   it("Can swap SOL to token with fee deducted on token", async () => test__swap_sol_to_token(program));
-  // it("Can swap token to SOL with fee deducted on SOL", async () => test__swap_token_to_sol(program));
+  it("Can swap token to SOL with fee deducted on SOL", async () => test__swap_token_to_sol(program));
   // it("Cannot swap more than liquidity", async () => test__swap_over_liquidity(program));
   // it("Can swap by everyone", async () => TODO(program));
   // it("Only liquidity provider can withdraw profit", async () => TODO(program));
@@ -88,23 +88,26 @@ async function test__swap_token(program: Program<SimpleLiquidityPool>, option: {
     payer,
   } = option;
 
+  const swappingBaseToQuote = fromPubKey.equals(NATIVE_MINT);
+  const [basePubKey, quotePubKey] = swappingBaseToQuote
+    ? [fromPubKey, toPubKey]
+    : [toPubKey, fromPubKey];
+
+
   const provider = getCurrentProvider();
 
-  const LP_SEED_PREFIX = Buffer.from(JSON.parse(getProgramConstant("LP_SEED_PREFIX", program)), "utf8");
-  assert(LP_SEED_PREFIX.toString().length > 0, "LP_FEE_SEED_PREFIX empty")
-  const LP_FEE_SEED_PREFIX = Buffer.from(JSON.parse(getProgramConstant("LP_FEE_SEED_PREFIX", program)), "utf8");
-  assert(LP_FEE_SEED_PREFIX.toString().length > 0, "LP_FEE_SEED_PREFIX empty")
-  const LP_RATE_DECIMAL = parseInt(getProgramConstant("LP_RATE_DECIMAL", program));
-  // expect(LP_RATE_DECIMAL).to.be.not.NaN.and.gt(0); // ==> This syntax has Bug in assertion
-  assert(LP_RATE_DECIMAL > 0, "LP_RATE_DECIMAL must > 0");
-  const LP_SWAP_FEE_PERMIL = parseInt(getProgramConstant("LP_SWAP_FEE_PERMIL", program));
-  assert(LP_SWAP_FEE_PERMIL > 0, "LP_SWAP_FEE_PERMIL must > 0");
-  const TOKEN_DECIMAL = parseInt(getProgramIdlConstant("TOKEN_DECIMAL", MoveTokenIdl));
-  assert(TOKEN_DECIMAL > 0, "TOKEN_DECIMAL must > 0");
+  const {
+    LP_SEED_PREFIX,
+    LP_LIQUIDITY_PREFIX,
+    LP_FEE_SEED_PREFIX,
+    LP_RATE_DECIMAL,
+    LP_SWAP_FEE_PERMIL,
+    TOKEN_DECIMAL,
+  } = getThisProgramConstants(program);
 
   const NATIVE_SOL_DECIMAL = 9;
   const PRICE_RATE = 10;
-  const fromDecimals = fromPubKey.equals(NATIVE_MINT) ? NATIVE_SOL_DECIMAL : TOKEN_DECIMAL;
+  const fromDecimals = swappingBaseToQuote ? NATIVE_SOL_DECIMAL : TOKEN_DECIMAL;
   // const toDecimals = fromPubKey.equals(NATIVE_MINT) ? TOKEN_DECIMAL: NATIVE_SOL_DECIMAL;
 
 
@@ -135,7 +138,7 @@ async function test__swap_token(program: Program<SimpleLiquidityPool>, option: {
       0,
     ],
   }
-  const v = (idx) => fromPubKey.equals(NATIVE_MINT)
+  const v = (idx) => swappingBaseToQuote
     ? changeMatrix.baseToQuote[idx]
     : changeMatrix.quoteToBase[idx]
   const baseIncAmount = v(0) * Math.pow(10, NATIVE_SOL_DECIMAL);
@@ -150,32 +153,38 @@ async function test__swap_token(program: Program<SimpleLiquidityPool>, option: {
   });
 
 
-  const [liquidityPoolPubKey] = (anchor.web3.PublicKey.findProgramAddressSync(
+  const [lpPubKey] = (anchor.web3.PublicKey.findProgramAddressSync(
     [
       LP_SEED_PREFIX,
-      // tokenBasePubKey.toBuffer(),
-      toPubKey.toBuffer(),
+      quotePubKey.toBuffer(),
     ],
     program.programId
   ))
-  const [liquidityPoolFeePubKey] = (anchor.web3.PublicKey.findProgramAddressSync(
+  const [lpFeePubKey] = (anchor.web3.PublicKey.findProgramAddressSync(
     [
       LP_FEE_SEED_PREFIX,
-      toPubKey.toBuffer(),
+      quotePubKey.toBuffer(),
+    ],
+    program.programId
+  ))
+  const [lpLiquidityPubKey] = (anchor.web3.PublicKey.findProgramAddressSync(
+    [
+      LP_LIQUIDITY_PREFIX,
+      quotePubKey.toBuffer(),
     ],
     program.programId
   ))
 
-  const quoteAta = await anchor.utils.token.associatedAddress({
-    mint: toPubKey,
-    owner: liquidityPoolPubKey
+  const lpLiquidityQuoteAta = await anchor.utils.token.associatedAddress({
+    mint: quotePubKey,
+    owner: lpLiquidityPubKey
   });
   const feeAta = await anchor.utils.token.associatedAddress({
-    mint: toPubKey,
-    owner: liquidityPoolFeePubKey
+    mint: quotePubKey,
+    owner: lpFeePubKey
   });
   const userQuoteAta = await anchor.utils.token.associatedAddress({
-    mint: toPubKey,
+    mint: quotePubKey,
     owner: payer.publicKey
   });
 
@@ -187,16 +196,19 @@ async function test__swap_token(program: Program<SimpleLiquidityPool>, option: {
     before: {quote: 0, base: 0},
     after: {quote: 0, base: 0},
   }
-  lpBalances.before.base = await provider.connection.getBalance(liquidityPoolPubKey);
-  lpBalances.before.quote = new anchor.BN((await provider.connection.getTokenAccountBalance(quoteAta)).value.amount).toNumber();
-  lpFeeBalances.before.base = await provider.connection.getBalance(liquidityPoolFeePubKey);
+
+  console.log('{test__swap_token} lpLiquidityQuoteAta: ', lpLiquidityQuoteAta);
+
+  lpBalances.before.base = await provider.connection.getBalance(lpPubKey);
+  lpBalances.before.quote = new anchor.BN((await provider.connection.getTokenAccountBalance(lpLiquidityQuoteAta)).value.amount).toNumber();
+  lpFeeBalances.before.base = await provider.connection.getBalance(lpFeePubKey);
   lpFeeBalances.before.quote = new anchor.BN((await provider.connection.getTokenAccountBalance(feeAta)).value.amount).toNumber();
 
   VERBOSE && console.log('{test__swap_token} : ', {
-    liquidityPoolPubKey: liquidityPoolPubKey.toString(),
-    liquidityPoolFeePubKey: liquidityPoolFeePubKey.toString(),
+    liquidityPoolPubKey: lpPubKey.toString(),
+    liquidityPoolFeePubKey: lpFeePubKey.toString(),
     feeAta: feeAta.toString(),
-    quoteAta: quoteAta.toString(),
+    quoteAta: lpLiquidityQuoteAta.toString(),
     lpBalances,
     lpFeeBalances,
     fromAmountBN: fromAmount * Math.pow(10, fromDecimals),
@@ -208,14 +220,14 @@ async function test__swap_token(program: Program<SimpleLiquidityPool>, option: {
     new anchor.BN(fromAmount * Math.pow(10, fromDecimals)),
   )
     .accounts({
-      liquidityPool: liquidityPoolPubKey,
-      liquidityPoolFee: liquidityPoolFeePubKey,
-      feeAta: feeAta,
-      tokenQuote: toPubKey,
-      quoteAta: quoteAta,
+      lp: lpPubKey,
+      tokenQuote: quotePubKey,
+      lpLiquidity: lpLiquidityPubKey,
+      lpLiquidityQuoteAta: lpLiquidityQuoteAta,
+      lpFee: lpFeePubKey,
+      lpFeeQuoteAta: feeAta,
       userQuoteAta: userQuoteAta,
-      authority: payer.publicKey,
-      // rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      user: payer.publicKey,
       systemProgram: anchor.web3.SystemProgram.programId,
       tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
       associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
@@ -229,9 +241,9 @@ async function test__swap_token(program: Program<SimpleLiquidityPool>, option: {
     });
   VERBOSE && console.log('{test__swap_token} tx: ', tx);
 
-  lpBalances.after.base = await provider.connection.getBalance(liquidityPoolPubKey);
-  lpBalances.after.quote = new anchor.BN((await provider.connection.getTokenAccountBalance(quoteAta)).value.amount).toNumber();
-  lpFeeBalances.after.base = await provider.connection.getBalance(liquidityPoolFeePubKey);
+  lpBalances.after.base = await provider.connection.getBalance(lpPubKey);
+  lpBalances.after.quote = new anchor.BN((await provider.connection.getTokenAccountBalance(lpLiquidityQuoteAta)).value.amount).toNumber();
+  lpFeeBalances.after.base = await provider.connection.getBalance(lpFeePubKey);
   lpFeeBalances.after.quote = new anchor.BN((await provider.connection.getTokenAccountBalance(feeAta)).value.amount).toNumber();
 
   // lpBalances must increase

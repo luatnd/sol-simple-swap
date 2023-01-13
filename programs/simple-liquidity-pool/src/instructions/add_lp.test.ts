@@ -1,12 +1,12 @@
 import * as anchor from "@project-serum/anchor";
 import {getProvider, Program} from "@project-serum/anchor";
-import {SimpleLiquidityPool, IDL as SimpleLiquidityPoolIdl} from "../../../../target/types/simple_liquidity_pool";
-import {IDL as MoveTokenIdl} from "../../../../target/types/move_token";
+import {SimpleLiquidityPool} from "../../../../target/types/simple_liquidity_pool";
 import {sleep} from "../../../../tests/helpers/time";
 import {getCurrentProvider, getProgramConstant, getProgramIdlConstant, getProviderWallet, VERBOSE} from "../../../../tests/helpers/test-env";
 import {assert, expect} from "chai";
 import {NATIVE_MINT, NATIVE_MINT_2022} from "@solana/spl-token"
 import {getPrevMintTokenInfoFromTmpData} from "../../../move-token/src/instructions/create_token.test";
+import {getThisProgramConstants} from "./utils.test";
 
 
 export default function test__add_liquidity(program: Program<SimpleLiquidityPool>) {
@@ -33,25 +33,17 @@ export async function add_liquidity_to_exist_lp(program: Program<SimpleLiquidity
   const provider = getCurrentProvider();
   const wallet = getProviderWallet();
 
-  const LP_SEED_PREFIX_RAW = getProgramConstant("LP_SEED_PREFIX", program);
-  const LP_SEED_PREFIX = Buffer.from(JSON.parse(LP_SEED_PREFIX_RAW), "utf8");
-  expect(LP_SEED_PREFIX).is.not.empty;
-  const LP_FEE_SEED_PREFIX_RAW = getProgramConstant("LP_FEE_SEED_PREFIX", program);
-  const LP_FEE_SEED_PREFIX = Buffer.from(JSON.parse(LP_FEE_SEED_PREFIX_RAW), "utf8");
-  expect(LP_SEED_PREFIX).is.not.empty;
-  const LP_RATE_DECIMAL_RAW = getProgramConstant("LP_RATE_DECIMAL", program);
-  expect(LP_RATE_DECIMAL_RAW).to.be.not.null;
-  const LP_RATE_DECIMAL = parseInt(LP_RATE_DECIMAL_RAW);
-  const TOKEN_DECIMAL_RAW = getProgramIdlConstant("TOKEN_DECIMAL", MoveTokenIdl);
-  expect(TOKEN_DECIMAL_RAW).to.be.not.null;
-  const TOKEN_DECIMAL = parseInt(TOKEN_DECIMAL_RAW);
-
+  const {
+    LP_SEED_PREFIX,
+    LP_LIQUIDITY_PREFIX,
+    TOKEN_DECIMAL,
+  } = getThisProgramConstants(program);
 
 
   // const tokenBasePubKey = NATIVE_MINT;  // Sol
   const prevMintToken = getPrevMintTokenInfoFromTmpData(); // This test must run after mint test; Test run async but mochajs test case will run once by one
   const tokenQuotePubKey = new anchor.web3.PublicKey(prevMintToken.mintKeypair.publicKey)
-  const [liquidityPoolPubKey] = (anchor.web3.PublicKey.findProgramAddressSync(
+  const [lpPubKey] = (anchor.web3.PublicKey.findProgramAddressSync(
     [
       LP_SEED_PREFIX,
       // tokenBasePubKey.toBuffer(),
@@ -59,9 +51,9 @@ export async function add_liquidity_to_exist_lp(program: Program<SimpleLiquidity
     ],
     program.programId
   ))
-  const [liquidityPoolFeePubKey] = (anchor.web3.PublicKey.findProgramAddressSync(
+  const [lpLiquidityPubKey] = (anchor.web3.PublicKey.findProgramAddressSync(
     [
-      LP_FEE_SEED_PREFIX,
+      LP_LIQUIDITY_PREFIX,
       tokenQuotePubKey.toBuffer(),
     ],
     program.programId
@@ -69,20 +61,12 @@ export async function add_liquidity_to_exist_lp(program: Program<SimpleLiquidity
 
   // const baseAta = await anchor.utils.token.associatedAddress({
   //   mint: tokenBasePubKey,
-  //   owner: liquidityPoolPubKey
+  //   owner: lpPubKey
   // });
-  const quoteAta = await anchor.utils.token.associatedAddress({
+  const lpLiquidityQuoteAta = await anchor.utils.token.associatedAddress({
     mint: tokenQuotePubKey,
-    owner: liquidityPoolPubKey
+    owner: lpLiquidityPubKey
   });
-  const feeAta = await anchor.utils.token.associatedAddress({
-    mint: tokenQuotePubKey,
-    owner: liquidityPoolFeePubKey
-  });
-  // const userBaseAta = await anchor.utils.token.associatedAddress({
-  //   mint: tokenBasePubKey,
-  //   owner: wallet.payer.publicKey
-  // });
   const userQuoteAta = await anchor.utils.token.associatedAddress({
     mint: tokenQuotePubKey,
     owner: wallet.payer.publicKey
@@ -92,8 +76,8 @@ export async function add_liquidity_to_exist_lp(program: Program<SimpleLiquidity
     before: {quote: 0, base: 0},
     after: {quote: 0, base: 0},
   }
-  lpBalances.before.base = await provider.connection.getBalance(liquidityPoolPubKey);
-  lpBalances.before.quote = new anchor.BN((await provider.connection.getTokenAccountBalance(quoteAta)).value.amount).toNumber();
+  lpBalances.before.base = await provider.connection.getBalance(lpLiquidityPubKey);
+  lpBalances.before.quote = new anchor.BN((await provider.connection.getTokenAccountBalance(lpLiquidityQuoteAta)).value.amount).toNumber();
   // console.log('{test___add_liquidity_to_exist_lp} lpBalances before: ', lpBalances);
 
   const baseAmount = baseDepositAmount * 1e9;
@@ -104,17 +88,12 @@ export async function add_liquidity_to_exist_lp(program: Program<SimpleLiquidity
     new anchor.BN(quoteAmount), // My token
   )
     .accounts({
-      liquidityPool: liquidityPoolPubKey,
-      liquidityPoolFee: liquidityPoolFeePubKey,
-      feeAta: feeAta,
-      // tokenBase: tokenBasePubKey,
+      lp: lpPubKey,
       tokenQuote: tokenQuotePubKey,
-      // baseAta: baseAta,
-      quoteAta: quoteAta,
-      // userBaseAta: userBaseAta,
+      lpLiquidity: lpLiquidityPubKey,
+      lpLiquidityQuoteAta: lpLiquidityQuoteAta,
       userQuoteAta: userQuoteAta,
-      authority: wallet.payer.publicKey,
-      // rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      user: wallet.payer.publicKey,
       systemProgram: anchor.web3.SystemProgram.programId,
       tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
       associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
@@ -127,8 +106,8 @@ export async function add_liquidity_to_exist_lp(program: Program<SimpleLiquidity
     });
   console.log('{test___add_liquidity_to_exist_lp} tx: ', tx);
 
-  lpBalances.after.base = await provider.connection.getBalance(liquidityPoolPubKey);
-  lpBalances.after.quote = new anchor.BN((await provider.connection.getTokenAccountBalance(quoteAta)).value.amount).toNumber();
+  lpBalances.after.base = await provider.connection.getBalance(lpLiquidityPubKey);
+  lpBalances.after.quote = new anchor.BN((await provider.connection.getTokenAccountBalance(lpLiquidityQuoteAta)).value.amount).toNumber();
 
   // lpBalances must increase
   VERBOSE && console.log('{test___add_liquidity_to_exist_lp} lpBalances after: ', lpBalances);

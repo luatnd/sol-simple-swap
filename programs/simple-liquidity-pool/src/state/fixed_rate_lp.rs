@@ -1,10 +1,4 @@
 use anchor_lang::prelude::*;
-use anchor_lang::system_program;
-use anchor_spl::{
-  token,
-  token::spl_token,
-};
-use crate::instructions::LpAddLiquidity;
 use crate::state::{errors::*, SwapDir};
 
 ///
@@ -30,12 +24,12 @@ pub struct FixedRateLP {
 
   // NOTE: base token is hardcoded to be native SOL
   pub token_base: Pubkey,   // 32
-
-  // Use pool address to store base token SOL
-  // pub amount_base_ata: Pubkey,  // 32
-
   pub token_quote: Pubkey,  // 32
-  pub amount_quote_ata: Pubkey, // 32
+
+  // pub liquidity: Pubkey,    // 32
+  // pub fee: Pubkey,          // 32
+  // pub liquidity_quote_ata: Pubkey, // 32
+  // pub fee_quote_ata: Pubkey, // 32
 
   // NOTE: At this time: we read balance inside amount_base_ATA as the single source of truth
   // For better performance, need another complex implementation, such as cache the balance here
@@ -46,11 +40,10 @@ pub struct FixedRateLP {
 
   // misc
   pub bump: u8,                 // 1
+  pub liquidity_bump: u8,       // 1
+  pub fee_bump: u8,             // 1
 }
 
-
-#[account]
-pub struct FixedRateLpFee {}
 
 // pub enum LpType {
 //   FixedRate, // 1A always = nB, n is fixed
@@ -65,8 +58,9 @@ pub struct FixedRateLpFee {}
 #[constant]
 pub const LP_SEED_PREFIX: &[u8] = b"FixedRateLP_";
 #[constant]
+pub const LP_LIQUIDITY_PREFIX: &[u8] = b"FixedRateLP_liquid_";
+#[constant]
 pub const LP_FEE_SEED_PREFIX: &[u8] = b"FixedRateLP_fee_";
-
 #[constant]
 pub const LP_RATE_DECIMAL: u8 = 3;
 
@@ -76,7 +70,7 @@ pub const LP_SWAP_FEE_PERMIL: u8 = 50; // 50/1000 = 5.0%
 
 impl FixedRateLP {
   // pub const SEED_PREFIX: &'static [u8] = b"FixedRateLP_";
-  pub const MAXIMUM_SIZE: usize = 4 + 32 + 32 + 32 + 1;
+  pub const MAXIMUM_SIZE: usize = 4 + 32 + 32 + 1 + 1 + 1;
 
 
   pub fn get_swap_dir(&self, from_token: Pubkey, to_token: Pubkey) -> Option<SwapDir> {
@@ -96,12 +90,9 @@ impl FixedRateLP {
 impl FixedRateLP {
   pub fn init(
     &mut self,
-    token_base: Pubkey,
-    token_quote: Pubkey,
-    // amount_base_ata: Pubkey,
-    amount_quote_ata: Pubkey,
+    token_base: Pubkey, token_quote: Pubkey,
     fixed_rate: u32,
-    bump: u8,
+    bump: u8, liquidity_bump: u8, fee_bump: u8,
   ) -> Result<()> {
     require_gt!(fixed_rate, 0, LpBaseError::InvalidRate);
     require!(fixed_rate <= 2_u32.pow(32 - LP_RATE_DECIMAL as u32), LpBaseError::InvalidRate);
@@ -109,16 +100,15 @@ impl FixedRateLP {
     self.rate = fixed_rate;
     self.token_base = token_base;
     self.token_quote = token_quote;
-    // self.amount_base_ata = amount_base_ata;
-    self.amount_quote_ata = amount_quote_ata;
-    // self.amount_base = 0;
-    // self.amount_quote = 0;
-
     self.bump = bump;
+    self.liquidity_bump = liquidity_bump;
+    self.fee_bump = fee_bump;
 
     Ok(())
   }
 
+  /// No logic yet because this lp is simple, but let it here to validate.
+  /// Or just remove this fn is oke
   pub fn add_liquidity(&mut self, token_base_amount: u64, token_quote_amount: u64) -> Result<()> {
     require_gte!(token_base_amount, 0, LpBaseError::InvalidAmount);
     require_gte!(token_quote_amount, 0, LpBaseError::InvalidAmount);
@@ -190,125 +180,6 @@ impl FixedRateLP {
   // }
 }
 
-
-// pub fn get_current_pool_liquidity<'info>(ctx: &Context<LpAddLiquidity<'info>>) -> Result<(u64, u64)> {
-//   let current_base_liquidity: u64 = ctx.accounts.liquidity_pool.to_account_info().lamports();
-//   let current_quote_liquidity: u64 = ctx.accounts.quote_ata.amount;
-//
-//   Ok((current_base_liquidity, current_quote_liquidity))
-// }
-
-///
-/// Transfer token from user wallet into pool
-///
-pub fn transfer_token_into_pool<'info>(
-  ctx: &Context<LpAddLiquidity<'info>>,
-  for_token: Pubkey,
-  amount: u64,
-  override_destination: Option<Account<'info, token::TokenAccount>>,
-) -> Result<()> {
-  msg!("[transfer_token_into_pool] Transferring {} {} tokens ...", amount, for_token.key().to_string());
-
-  let is_native_and_base_token = for_token == spl_token::native_mint::id();
-
-  if is_native_and_base_token {
-    // case native SOL
-    system_program::transfer(
-      CpiContext::new(
-        ctx.accounts.system_program.to_account_info(),
-        system_program::Transfer {
-          from: ctx.accounts.authority.to_account_info(),
-          to: if override_destination.is_some() {
-            override_destination.unwrap().to_account_info()
-          } else {
-            ctx.accounts.liquidity_pool.to_account_info()
-          },
-        },
-      ),
-      amount,
-    )
-  } else {
-    // case SPL token
-    token::transfer(
-      CpiContext::new(
-        ctx.accounts.token_program.to_account_info(),
-        token::Transfer {
-          from: ctx.accounts.user_quote_ata.to_account_info(),
-          to: if override_destination.is_some() {
-            override_destination.unwrap().to_account_info()
-          } else {
-            ctx.accounts.quote_ata.to_account_info()
-          },
-          authority: ctx.accounts.authority.to_account_info(),
-        },
-      ),
-      amount,
-    )
-  }
-}
-
-pub fn transfer_token_out_of_pool<'info>(
-  ctx: &Context<LpAddLiquidity<'info>>,
-  for_token: Pubkey,
-  amount: u64,
-) -> Result<()> {
-  msg!("[transfer_token_out_of_pool] Transferring {} {} tokens ...", amount, for_token.key().to_string());
-
-  let is_native_and_base_token = for_token == spl_token::native_mint::id();
-
-  if is_native_and_base_token {
-    // case native SOL
-    system_program::transfer(
-      CpiContext::new(
-        ctx.accounts.system_program.to_account_info(),
-        system_program::Transfer {
-          from: ctx.accounts.liquidity_pool.to_account_info(),
-          to: ctx.accounts.authority.to_account_info(),
-        },
-      ),
-      amount,
-    )
-  } else {
-    // case SPL token
-    let token_quote_pubkey = ctx.accounts.token_quote.key().clone();
-
-    let (auth, seed) = Pubkey::find_program_address(
-      &[
-        LP_SEED_PREFIX,
-        token_quote_pubkey.as_ref(),
-      ],
-      ctx.program_id,
-    );
-    msg!("[transfer_token_out_of_pool] auth: {}, seed {}", auth.key().to_string(), seed);
-
-    let signer_seeds: &[&[&[u8]]] = &[&[
-      LP_SEED_PREFIX,
-      token_quote_pubkey.as_ref(),
-      &[seed],
-    ]];
-
-    token::transfer(
-      CpiContext::new_with_signer(
-        ctx.accounts.token_program.to_account_info(),
-        token::Transfer {
-          from: ctx.accounts.quote_ata.to_account_info(),
-          to: ctx.accounts.user_quote_ata.to_account_info(),
-          authority: ctx.accounts.liquidity_pool.to_account_info(),
-        },
-        signer_seeds,
-      ),
-      amount,
-    )
-  }
-}
-
-pub fn transfer_token_into_pool_fee<'info>(
-  ctx: &Context<LpAddLiquidity<'info>>,
-  for_token: Pubkey,
-  amount: u64,
-) -> Result<()> {
-  transfer_token_into_pool(&ctx, for_token, amount, Some(ctx.accounts.fee_ata.clone()))
-}
 
 // #[cfg(test)]
 // mod tests {

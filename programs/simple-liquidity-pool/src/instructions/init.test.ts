@@ -2,11 +2,12 @@ import * as anchor from "@project-serum/anchor";
 import {Program} from "@project-serum/anchor";
 import {SimpleLiquidityPool, IDL as SimpleLiquidityPoolIdl} from "../../../../target/types/simple_liquidity_pool";
 import {sleep} from "../../../../tests/helpers/time";
-import {getProgramConstant, getProviderWallet, VERBOSE} from "../../../../tests/helpers/test-env";
+import {getProgramConstant, getProgramIdlConstant, getProviderWallet, VERBOSE} from "../../../../tests/helpers/test-env";
 import {assert, expect} from "chai";
 import {NATIVE_MINT, NATIVE_MINT_2022} from "@solana/spl-token"
 import {getPrevMintTokenInfoFromTmpData} from "../../../move-token/src/instructions/create_token.test";
 import {airDropSolIfBalanceLowerThan} from "../../../../tests/helpers/token";
+import {getThisProgramConstants} from "./utils.test";
 
 
 export default function test__init(program: Program<SimpleLiquidityPool>) {
@@ -46,6 +47,7 @@ async function test_init_lp_only_once(program: Program<SimpleLiquidityPool>) {
       // tokenBasePubKey,
       tokenQuotePubKey,
       wallet.payer,
+      false,
     );
     tx2 = tx;
   } catch (e) {
@@ -58,7 +60,7 @@ async function test_init_lp_only_once(program: Program<SimpleLiquidityPool>) {
 
   // Account must be created
   const lpAccount = await program.account.fixedRateLp.fetch(liquidityPoolPubKey);
-  expect(lpAccount.amountQuoteAta.toBase58()).to.has.length.gt(0);
+  assert(lpAccount.bump > 0, "Bump must be saved in state");
 }
 
 async function test_reinit_lp_by_other_wallet(program: Program<SimpleLiquidityPool>) {
@@ -79,6 +81,7 @@ async function test_reinit_lp_by_other_wallet(program: Program<SimpleLiquidityPo
       // tokenBasePubKey,
       tokenQuotePubKey,
       walletKeyPair,
+      false,
     );
     tx2 = tx;
   } catch (e) {
@@ -95,19 +98,16 @@ async function init_new_lp(
   // base: anchor.web3.PublicKey,
   quote: anchor.web3.PublicKey,
   authority: anchor.web3.Keypair,
+  logError = true,
 ) {
-  const LP_SEED_PREFIX_RAW = getProgramConstant("LP_SEED_PREFIX", program);
-  const LP_SEED_PREFIX = Buffer.from(JSON.parse(LP_SEED_PREFIX_RAW), "utf8");
-  expect(LP_SEED_PREFIX).is.not.empty;
-  const LP_FEE_SEED_PREFIX_RAW = getProgramConstant("LP_FEE_SEED_PREFIX", program);
-  const LP_FEE_SEED_PREFIX = Buffer.from(JSON.parse(LP_FEE_SEED_PREFIX_RAW), "utf8");
-  expect(LP_SEED_PREFIX).is.not.empty;
-  const LP_RATE_DECIMAL_RAW = getProgramConstant("LP_RATE_DECIMAL", program);
-  expect(LP_RATE_DECIMAL_RAW).to.be.not.null;
-  const LP_RATE_DECIMAL = parseInt(LP_RATE_DECIMAL_RAW);
+  const {
+    LP_SEED_PREFIX,
+    LP_LIQUIDITY_PREFIX,
+    LP_FEE_SEED_PREFIX,
+    LP_RATE_DECIMAL,
+  } = getThisProgramConstants(program);
 
-
-  const [liquidityPoolPubKey] = (anchor.web3.PublicKey.findProgramAddressSync(
+  const [lpPubKey, bump] = (anchor.web3.PublicKey.findProgramAddressSync(
     [
       LP_SEED_PREFIX,
       // base.toBuffer(),
@@ -115,39 +115,50 @@ async function init_new_lp(
     ],
     program.programId
   ))
-  const [liquidityPoolFeePubKey] = (anchor.web3.PublicKey.findProgramAddressSync(
+  const [lpFeePubKey] = (anchor.web3.PublicKey.findProgramAddressSync(
     [
       LP_FEE_SEED_PREFIX,
       quote.toBuffer(),
     ],
     program.programId
   ))
-  VERBOSE && console.log('{init_new_lp} liquidityPoolPubKey, FeePubKey: ', liquidityPoolPubKey.toString(), liquidityPoolFeePubKey.toString());
+  const [lpLiquidityPubKey] = (anchor.web3.PublicKey.findProgramAddressSync(
+    [
+      LP_LIQUIDITY_PREFIX,
+      quote.toBuffer(),
+    ],
+    program.programId
+  ))
+  VERBOSE && console.log('{init_new_lp} liquidityPoolPubKey, FeePubKey: ', {
+    lpPubKey: lpPubKey.toString(),
+    lpFeePubKey: lpFeePubKey.toString(),
+    lpLiquidityPubKey: lpLiquidityPubKey.toString(),
+  });
+
 
   // const baseAta = await anchor.utils.token.associatedAddress({
   //   mint: base,
   //   owner: liquidityPoolPubKey
   // });
-  const quoteAta = await anchor.utils.token.associatedAddress({
+  const lpLiquidityQuoteAta = await anchor.utils.token.associatedAddress({
     mint: quote,
-    owner: liquidityPoolPubKey
+    owner: lpLiquidityPubKey
   });
-  const feeAta = await anchor.utils.token.associatedAddress({
+  const lpFeeQuoteAta = await anchor.utils.token.associatedAddress({
     mint: quote,
-    owner: liquidityPoolFeePubKey
+    owner: lpFeePubKey
   });
 
   const fixedRateDecimal = 10;
   const tx = await program.methods.initialize(fixedRateDecimal * Math.pow(10, LP_RATE_DECIMAL))
     .accounts({
-      liquidityPool: liquidityPoolPubKey,
-      liquidityPoolFee: liquidityPoolFeePubKey,
-      feeAta: feeAta,
-      // tokenBase: base,
+      lp: lpPubKey,
       tokenQuote: quote,
-      // baseAta: baseAta,
-      quoteAta: quoteAta,
-      authority: authority.publicKey,
+      lpLiquidity: lpLiquidityPubKey,
+      lpLiquidityQuoteAta: lpLiquidityQuoteAta,
+      lpFee: lpFeePubKey,
+      lpFeeQuoteAta: lpFeeQuoteAta,
+      user: authority.publicKey,
       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       systemProgram: anchor.web3.SystemProgram.programId,
       tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
@@ -156,13 +167,13 @@ async function init_new_lp(
     .signers([authority])
     .rpc()
     .catch(e => {
-      VERBOSE && console.log('Error: ', e); // show on-chain logs
+      VERBOSE && logError && console.log('Error: ', e); // show on-chain logs
       throw e;
     });
   console.log('{init_new_lp} tx: ', tx);
 
   return {
     tx,
-    liquidityPoolPubKey,
+    liquidityPoolPubKey: lpPubKey,
   };
 }

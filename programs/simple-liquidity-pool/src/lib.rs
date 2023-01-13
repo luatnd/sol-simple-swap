@@ -4,7 +4,6 @@ mod errors;
 
 use anchor_lang::prelude::*;
 use instructions::*; // Must import as * to avoid error
-use crate::state::SwapDir;
 
 declare_id!("GMDA6SqHUFzctniBczeBSsoLEfd3HaW161wwyAms2buL");
 
