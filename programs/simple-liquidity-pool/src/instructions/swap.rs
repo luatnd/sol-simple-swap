@@ -72,7 +72,7 @@ pub struct LpSwap<'info> {
   #[account(
     mut,
     associated_token::mint = token_quote,
-    associated_token::authority = lp_liquidity,
+    associated_token::authority = lp,
   )]
   pub lp_liquidity_quote_ata: Account<'info, token::TokenAccount>,
 
@@ -167,34 +167,61 @@ fn transfer_token_out_of_liquidity<'info>(
   msg!("[transfer_token_out_of_liquidity] Transferring {} {} tokens ...", amount, for_token.key().to_string());
 
   let token_quote_pubkey = ctx.accounts.token_quote.key().clone();
-  let bump = ctx.accounts.lp.liquidity_bump;
-  msg!("[transfer_token_out_of_liquidity] lp.liquidity_bump: {}", bump);
 
-  let signer_seeds: &[&[&[u8]]] = &[&[
-    LP_LIQUIDITY_PREFIX,
-    token_quote_pubkey.as_ref(),
-    &[bump],
-  ]];
 
   let is_native_and_base_token = for_token == spl_token::native_mint::id();
 
   if is_native_and_base_token {
+    // let bump = ctx.accounts.lp.liquidity_bump;
+    // msg!("[transfer_token_out_of_liquidity] lp.liquidity_bump: {}", bump);
+    //
+    // let signer_seeds: &[&[&[u8]]] = &[&[
+    //   LP_LIQUIDITY_PREFIX,
+    //   token_quote_pubkey.as_ref(),
+    //   &[bump],
+    // ]];
+
     // case native SOL
-    system_program::transfer(
-      CpiContext::new(
-        ctx.accounts.system_program.to_account_info(),
-        system_program::Transfer {
-          from: ctx.accounts.lp_liquidity.to_account_info(),
-          to: if is_fee_transfer {
-            ctx.accounts.lp_fee.to_account_info()
-          } else {
-            ctx.accounts.user.to_account_info()
-          },
-        },
-      ).with_signer(signer_seeds),
-      amount,
-    )
+    // system_program::transfer(
+    //   CpiContext::new(
+    //     ctx.accounts.system_program.to_account_info(),
+    //     system_program::Transfer {
+    //       from: ctx.accounts.lp_liquidity.to_account_info(),
+    //       to: if is_fee_transfer {
+    //         ctx.accounts.lp_fee.to_account_info()
+    //       } else {
+    //         ctx.accounts.user.to_account_info()
+    //       },
+    //     },
+    //   ).with_signer(signer_seeds),
+    //   amount,
+    // )
+    // Debit from_account and credit to_account
+
+    **ctx.accounts.lp_liquidity
+      .to_account_info()
+      .try_borrow_mut_lamports()? -= amount;
+    if is_fee_transfer {
+      **ctx.accounts.lp_fee
+        .to_account_info()
+        .try_borrow_mut_lamports()? += amount;
+    } else {
+      **ctx.accounts.user
+        .to_account_info()
+        .try_borrow_mut_lamports()? += amount;
+    }
+
+    Ok(())
   } else {
+    let bump = ctx.accounts.lp.bump;
+    msg!("[transfer_token_out_of_liquidity] lp.bump: {}", bump);
+
+    let signer_seeds: &[&[&[u8]]] = &[&[
+      LP_SEED_PREFIX,
+      token_quote_pubkey.as_ref(),
+      &[bump],
+    ]];
+
     // case SPL token
     token::transfer(
       CpiContext::new_with_signer(
@@ -206,7 +233,7 @@ fn transfer_token_out_of_liquidity<'info>(
           } else {
             ctx.accounts.user_quote_ata.to_account_info()
           },
-          authority: ctx.accounts.lp_liquidity.to_account_info(),
+          authority: ctx.accounts.lp.to_account_info(),
         },
         signer_seeds,
       ),

@@ -6,8 +6,8 @@ import test__add_liquidity from "./instructions/add_lp.test";
 import test__swap from "./instructions/swap.test";
 
 const tests = [
-  // test__init,
-  // test__add_liquidity,
+  test__init,
+  test__add_liquidity,
   test__swap,
   // test__fullFlow,
 ];

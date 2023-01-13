@@ -15,7 +15,7 @@ export default function test__add_liquidity(program: Program<SimpleLiquidityPool
 
 async function test___add_liquidity_to_exist_lp(program: Program<SimpleLiquidityPool>) {
   const fixedRateDecimal = 10;
-  const baseDepositAmount = 0.1;
+  const baseDepositAmount = 0.3;
   return add_liquidity_to_exist_lp(program, {
     solAmount: baseDepositAmount,
     tokenAmount: baseDepositAmount * fixedRateDecimal,
@@ -65,7 +65,8 @@ export async function add_liquidity_to_exist_lp(program: Program<SimpleLiquidity
   // });
   const lpLiquidityQuoteAta = await anchor.utils.token.associatedAddress({
     mint: tokenQuotePubKey,
-    owner: lpLiquidityPubKey
+    // owner: lpLiquidityPubKey,
+    owner: lpPubKey,
   });
   const userQuoteAta = await anchor.utils.token.associatedAddress({
     mint: tokenQuotePubKey,

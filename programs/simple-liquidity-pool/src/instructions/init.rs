@@ -70,7 +70,7 @@ pub struct LpInit<'info> {
     init,
     payer = user,
     associated_token::mint = token_quote,
-    associated_token::authority = lp_liquidity,
+    associated_token::authority = lp,
   )]
   pub lp_liquidity_quote_ata: Account<'info, token::TokenAccount>,
 

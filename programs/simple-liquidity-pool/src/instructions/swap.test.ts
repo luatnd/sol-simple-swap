@@ -12,8 +12,8 @@ import {getThisProgramConstants} from "./utils.test";
 
 export default function test__swap(program: Program<SimpleLiquidityPool>) {
   it("Can swap SOL to token with fee deducted on token", async () => test__swap_sol_to_token(program));
-  // it("Can swap token to SOL with fee deducted on SOL", async () => test__swap_token_to_sol(program));
-  // it("Cannot swap more than liquidity", async () => test__swap_over_liquidity(program));
+  it("Can swap token to SOL with fee deducted on SOL", async () => test__swap_token_to_sol(program));
+  it("Cannot swap more than liquidity", async () => test__swap_over_liquidity(program));
   // it("Can swap by everyone", async () => TODO(program));
   // it("Only liquidity provider can withdraw profit", async () => TODO(program));
 }
@@ -26,7 +26,7 @@ async function test__swap_sol_to_token(program: Program<SimpleLiquidityPool>) {
   // For dev cycle only: Might add some liquidity first if NEEDED
   // await add_liquidity_to_exist_lp(program, {
   //   solAmount: 3,
-  //   tokenAmount: 40,
+  //   tokenAmount: 25,
   // })
 
   return test__swap_token(program, {
@@ -34,6 +34,7 @@ async function test__swap_sol_to_token(program: Program<SimpleLiquidityPool>) {
     to: myTokenPubKey,
     fromAmount: 0.0512345,
     payer: wallet.payer,
+    showException: true,
   });
 }
 
@@ -47,6 +48,7 @@ async function test__swap_token_to_sol(program: Program<SimpleLiquidityPool>) {
     to: NATIVE_MINT,
     fromAmount: 1.2345,
     payer: wallet.payer,
+    showException: true,
   });
 }
 
@@ -62,6 +64,7 @@ async function test__swap_over_liquidity(program: Program<SimpleLiquidityPool>) 
       to: myTokenPubKey,
       fromAmount: 30, // large enough to be over liquidity
       payer: wallet.payer,
+      showException: false,
     });
   } catch (e) {
     assert(
@@ -78,6 +81,7 @@ async function test__swap_token(program: Program<SimpleLiquidityPool>, option: {
   to: PublicKey,
   fromAmount: number,
   payer: Keypair,
+  showException?: boolean,
 }) {
   console.log('{test__swap_token} : ', Date.now());
 
@@ -86,6 +90,7 @@ async function test__swap_token(program: Program<SimpleLiquidityPool>, option: {
     to: toPubKey,
     fromAmount,
     payer,
+    showException,
   } = option;
 
   const swappingBaseToQuote = fromPubKey.equals(NATIVE_MINT);
@@ -177,7 +182,8 @@ async function test__swap_token(program: Program<SimpleLiquidityPool>, option: {
 
   const lpLiquidityQuoteAta = await anchor.utils.token.associatedAddress({
     mint: quotePubKey,
-    owner: lpLiquidityPubKey
+    // owner: lpLiquidityPubKey,
+    owner: lpPubKey,
   });
   const feeAta = await anchor.utils.token.associatedAddress({
     mint: quotePubKey,
@@ -212,8 +218,8 @@ async function test__swap_token(program: Program<SimpleLiquidityPool>, option: {
     lpFeeBalances,
     fromAmountBN: fromAmount * Math.pow(10, fromDecimals),
   });
-  const accounts = await program.account.fixedRateLp.fetch(lpPubKey);
-  console.log('{test__swap_token} accounts: ', accounts);
+  // const accounts = await program.account.fixedRateLp.fetch(lpPubKey);
+  // VERBOSE && console.log('{test__swap_token} lp account: ', accounts);
 
   const tx = await program.methods.swap(
     fromPubKey,
@@ -237,7 +243,7 @@ async function test__swap_token(program: Program<SimpleLiquidityPool>, option: {
     // .signers([payer])
     .rpc()
     .catch(e => {
-      VERBOSE && console.log('Error: ', e); // show on-chain logs
+      VERBOSE && showException && console.log('Error: ', e); // show on-chain logs
       throw e;
     });
   VERBOSE && console.log('{test__swap_token} tx: ', tx);
