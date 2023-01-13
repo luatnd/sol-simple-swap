@@ -31,9 +31,9 @@ pub fn swap(
 
   let to_amount = to_amount_without_fee - fee_of_to_token;
 
-  transfer_token_into_pool(&ctx, from, from_amount, true)?;
-  transfer_token_into_pool(&ctx, to, fee_of_to_token, false)?;
-  transfer_token_out_of_pool(&ctx, to, to_amount)?;
+  transfer_token_into_liquidity(&ctx, from, from_amount)?;
+  transfer_token_out_of_liquidity(&ctx, to, fee_of_to_token, true)?;
+  transfer_token_out_of_liquidity(&ctx, to, to_amount, false)?;
 
   Ok(())
 }
@@ -103,9 +103,10 @@ pub struct LpSwap<'info> {
   pub user_quote_ata: Account<'info, token::TokenAccount>,
 
 
+  /// CHECK: TODO
   #[account(mut)]
-  pub user: Signer<'info>,
-  // pub user: UncheckedAccount<'info>,
+  // pub user: Signer<'info>,
+  pub user: UncheckedAccount<'info>,
 
   // pub rent: Sysvar<'info, Rent>,
   pub system_program: Program<'info, System>,
@@ -115,15 +116,15 @@ pub struct LpSwap<'info> {
 
 
 ///
-/// Transfer token from user wallet into pool
+/// Transfer from_token from user wallet into pool
 ///
-fn transfer_token_into_pool<'info>(
+fn transfer_token_into_liquidity<'info>(
   ctx: &Context<LpSwap<'info>>,
   for_token: Pubkey,
   amount: u64,
-  store_in_liquidity: bool, // liquidity or fee, will expand to enum if have some more destinations
+  // is_fee_transfer: bool, // liquidity or fee, will expand to enum if have some more destinations
 ) -> Result<()> {
-  msg!("[transfer_token_into_pool] Transferring {} {} tokens ...", amount, for_token.key().to_string());
+  msg!("[transfer_token_into_liquidity] Transferring {} {} tokens ...", amount, for_token.key().to_string());
 
   let is_native_and_base_token = for_token == spl_token::native_mint::id();
 
@@ -134,11 +135,7 @@ fn transfer_token_into_pool<'info>(
         ctx.accounts.system_program.to_account_info(),
         system_program::Transfer {
           from: ctx.accounts.user.to_account_info(),
-          to: if store_in_liquidity {
-            ctx.accounts.lp_fee.to_account_info()
-          } else {
-            ctx.accounts.lp_liquidity.to_account_info()
-          },
+          to: ctx.accounts.lp_liquidity.to_account_info(),
         },
       ),
       amount,
@@ -150,11 +147,7 @@ fn transfer_token_into_pool<'info>(
         ctx.accounts.token_program.to_account_info(),
         token::Transfer {
           from: ctx.accounts.user_quote_ata.to_account_info(),
-          to: if store_in_liquidity {
-            ctx.accounts.lp_fee_quote_ata.to_account_info()
-          } else {
-            ctx.accounts.lp_liquidity_quote_ata.to_account_info()
-          },
+          to: ctx.accounts.lp_liquidity_quote_ata.to_account_info(),
           authority: ctx.accounts.user.to_account_info(),
         },
       ),
@@ -163,16 +156,19 @@ fn transfer_token_into_pool<'info>(
   }
 }
 
-fn transfer_token_out_of_pool<'info>(
+/// Transfer to_token from Liquidity to user
+fn transfer_token_out_of_liquidity<'info>(
   ctx: &Context<LpSwap<'info>>,
   for_token: Pubkey,
   amount: u64,
+  // Transfer swap fee from Liquidity to Fee
+  is_fee_transfer: bool,
 ) -> Result<()> {
-  msg!("[transfer_token_out_of_pool] Transferring {} {} tokens ...", amount, for_token.key().to_string());
+  msg!("[transfer_token_out_of_liquidity] Transferring {} {} tokens ...", amount, for_token.key().to_string());
 
   let token_quote_pubkey = ctx.accounts.token_quote.key().clone();
-  let bump = ctx.accounts.lp.bump;
-  msg!("[transfer_token_out_of_pool] liquidity_pool.bump: {}", bump);
+  let bump = ctx.accounts.lp.liquidity_bump;
+  msg!("[transfer_token_out_of_liquidity] lp.liquidity_bump: {}", bump);
 
   let signer_seeds: &[&[&[u8]]] = &[&[
     LP_LIQUIDITY_PREFIX,
@@ -189,7 +185,11 @@ fn transfer_token_out_of_pool<'info>(
         ctx.accounts.system_program.to_account_info(),
         system_program::Transfer {
           from: ctx.accounts.lp_liquidity.to_account_info(),
-          to: ctx.accounts.user.to_account_info(),
+          to: if is_fee_transfer {
+            ctx.accounts.lp_fee.to_account_info()
+          } else {
+            ctx.accounts.user.to_account_info()
+          },
         },
       ).with_signer(signer_seeds),
       amount,
@@ -201,8 +201,12 @@ fn transfer_token_out_of_pool<'info>(
         ctx.accounts.token_program.to_account_info(),
         token::Transfer {
           from: ctx.accounts.lp_liquidity_quote_ata.to_account_info(),
-          to: ctx.accounts.user_quote_ata.to_account_info(),
-          authority: ctx.accounts.lp_liquidity_quote_ata.to_account_info(),
+          to: if is_fee_transfer {
+            ctx.accounts.lp_fee_quote_ata.to_account_info()
+          } else {
+            ctx.accounts.user_quote_ata.to_account_info()
+          },
+          authority: ctx.accounts.lp_liquidity.to_account_info(),
         },
         signer_seeds,
       ),
@@ -210,3 +214,15 @@ fn transfer_token_out_of_pool<'info>(
     )
   }
 }
+
+
+// /// Transfer swap fee from Liquidity to Fee
+// fn transfer_swap_fee<'info>(
+//   ctx: &Context<LpSwap<'info>>,
+//   of_token: Pubkey,
+//   amount: u64,
+// ) -> Result<()> {
+//   msg!("[transfer_swap_fee] Transferring {} {} tokens ...", amount, of_token.key().to_string());
+//
+//   transfer_token_out_of_liquidity(ctx, of_token, amount, true)
+// }

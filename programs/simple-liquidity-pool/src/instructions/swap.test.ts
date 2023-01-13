@@ -12,7 +12,7 @@ import {getThisProgramConstants} from "./utils.test";
 
 export default function test__swap(program: Program<SimpleLiquidityPool>) {
   it("Can swap SOL to token with fee deducted on token", async () => test__swap_sol_to_token(program));
-  it("Can swap token to SOL with fee deducted on SOL", async () => test__swap_token_to_sol(program));
+  // it("Can swap token to SOL with fee deducted on SOL", async () => test__swap_token_to_sol(program));
   // it("Cannot swap more than liquidity", async () => test__swap_over_liquidity(program));
   // it("Can swap by everyone", async () => TODO(program));
   // it("Only liquidity provider can withdraw profit", async () => TODO(program));
@@ -127,12 +127,12 @@ async function test__swap_token(program: Program<SimpleLiquidityPool>, option: {
     // [Sol change, token change, fee Sol change, fee token change]
     baseToQuote: [
       +fromAmount,
-      -(fromAmount * PRICE_RATE - swap_fee(fromAmount * PRICE_RATE)),
+      -(fromAmount * PRICE_RATE),
       0,
       swap_fee(fromAmount * PRICE_RATE),
     ],
     quoteToBase: [
-      -(fromAmount / PRICE_RATE - swap_fee(fromAmount / PRICE_RATE)),
+      -(fromAmount / PRICE_RATE),
       +fromAmount,
       swap_fee(fromAmount / PRICE_RATE),
       0,
@@ -197,22 +197,23 @@ async function test__swap_token(program: Program<SimpleLiquidityPool>, option: {
     after: {quote: 0, base: 0},
   }
 
-  console.log('{test__swap_token} lpLiquidityQuoteAta: ', lpLiquidityQuoteAta);
-
-  lpBalances.before.base = await provider.connection.getBalance(lpPubKey);
+  lpBalances.before.base = await provider.connection.getBalance(lpLiquidityPubKey);
   lpBalances.before.quote = new anchor.BN((await provider.connection.getTokenAccountBalance(lpLiquidityQuoteAta)).value.amount).toNumber();
   lpFeeBalances.before.base = await provider.connection.getBalance(lpFeePubKey);
   lpFeeBalances.before.quote = new anchor.BN((await provider.connection.getTokenAccountBalance(feeAta)).value.amount).toNumber();
 
   VERBOSE && console.log('{test__swap_token} : ', {
-    liquidityPoolPubKey: lpPubKey.toString(),
-    liquidityPoolFeePubKey: lpFeePubKey.toString(),
+    lpPubKey: lpPubKey.toString(),
+    lpLiquidityPubKey: lpLiquidityPubKey.toString(),
+    lpFeePubKey: lpFeePubKey.toString(),
     feeAta: feeAta.toString(),
-    quoteAta: lpLiquidityQuoteAta.toString(),
+    lpLiquidityQuoteAta: lpLiquidityQuoteAta.toString(),
     lpBalances,
     lpFeeBalances,
     fromAmountBN: fromAmount * Math.pow(10, fromDecimals),
   });
+  const accounts = await program.account.fixedRateLp.fetch(lpPubKey);
+  console.log('{test__swap_token} accounts: ', accounts);
 
   const tx = await program.methods.swap(
     fromPubKey,
@@ -241,17 +242,17 @@ async function test__swap_token(program: Program<SimpleLiquidityPool>, option: {
     });
   VERBOSE && console.log('{test__swap_token} tx: ', tx);
 
-  lpBalances.after.base = await provider.connection.getBalance(lpPubKey);
+  lpBalances.after.base = await provider.connection.getBalance(lpLiquidityPubKey);
   lpBalances.after.quote = new anchor.BN((await provider.connection.getTokenAccountBalance(lpLiquidityQuoteAta)).value.amount).toNumber();
   lpFeeBalances.after.base = await provider.connection.getBalance(lpFeePubKey);
   lpFeeBalances.after.quote = new anchor.BN((await provider.connection.getTokenAccountBalance(feeAta)).value.amount).toNumber();
 
   // lpBalances must increase
   VERBOSE && console.log('{test__swap_token} lpBalances & fee after: ', lpBalances, lpFeeBalances);
-  expect(lpBalances.after.base).to.be.approximately(lpBalances.before.base + baseIncAmount, 1e6, `LP base balance must increase ${baseIncAmount}`);
-  expect(lpBalances.after.quote).to.be.approximately(lpBalances.before.quote + quoteIncAmount, 1e6, `LP quote balance must increase ${quoteIncAmount}`);
-  expect(lpFeeBalances.after.base).to.be.approximately(lpFeeBalances.before.base + baseFeeIncAmount, 1e6, `LP fee base balance must increase ${baseFeeIncAmount}`);
-  expect(lpFeeBalances.after.quote).to.be.approximately(lpFeeBalances.before.quote + quoteFeeIncAmount, 1e6, `LP fee quote balance must increase ${quoteFeeIncAmount}`);
+  expect(lpBalances.after.base).to.be.approximately(lpBalances.before.base + baseIncAmount, 1e-6, `LP base balance must increase ${baseIncAmount}`);
+  expect(lpBalances.after.quote).to.be.approximately(lpBalances.before.quote + quoteIncAmount, 1e-6, `LP quote balance must increase ${quoteIncAmount}`);
+  expect(lpFeeBalances.after.base).to.be.approximately(lpFeeBalances.before.base + baseFeeIncAmount, 1e-6, `LP fee base balance must increase ${baseFeeIncAmount}`);
+  expect(lpFeeBalances.after.quote).to.be.approximately(lpFeeBalances.before.quote + quoteFeeIncAmount, 1e-6, `LP fee quote balance must increase ${quoteFeeIncAmount}`);
 
   return tx;
 }

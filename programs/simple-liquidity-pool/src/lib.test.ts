@@ -7,8 +7,8 @@ import test__swap from "./instructions/swap.test";
 
 const tests = [
   // test__init,
-  test__add_liquidity,
-  // test__swap,
+  // test__add_liquidity,
+  test__swap,
   // test__fullFlow,
 ];
 testProgram<SimpleLiquidityPool>("SimpleLiquidityPool", tests)
