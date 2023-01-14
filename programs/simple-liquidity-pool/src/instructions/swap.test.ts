@@ -182,8 +182,8 @@ async function test__swap_token(program: Program<SimpleLiquidityPool>, option: {
 
   const lpLiquidityQuoteAta = await anchor.utils.token.associatedAddress({
     mint: quotePubKey,
-    // owner: lpLiquidityPubKey,
-    owner: lpPubKey,
+    owner: lpLiquidityPubKey,
+    // owner: lpPubKey,
   });
   const feeAta = await anchor.utils.token.associatedAddress({
     mint: quotePubKey,

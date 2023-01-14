@@ -72,7 +72,7 @@ pub struct LpSwap<'info> {
   #[account(
     mut,
     associated_token::mint = token_quote,
-    associated_token::authority = lp,
+    associated_token::authority = lp_liquidity,
   )]
   pub lp_liquidity_quote_ata: Account<'info, token::TokenAccount>,
 
@@ -184,11 +184,11 @@ fn transfer_token_out_of_liquidity<'info>(
     }
     Ok(())
   } else {
-    let bump = ctx.accounts.lp.bump;
+    let bump = ctx.accounts.lp.liquidity_bump;
     msg!("[transfer_token_out_of_liquidity] lp.bump: {}", bump);
 
     let signer_seeds: &[&[&[u8]]] = &[&[
-      LP_SEED_PREFIX,
+      LP_LIQUIDITY_PREFIX,
       token_quote_pubkey.as_ref(),
       &[bump],
     ]];
@@ -204,7 +204,7 @@ fn transfer_token_out_of_liquidity<'info>(
           } else {
             ctx.accounts.user_quote_ata.to_account_info()
           },
-          authority: ctx.accounts.lp.to_account_info(),
+          authority: ctx.accounts.lp_liquidity.to_account_info(),
         },
         signer_seeds,
       ),

@@ -65,8 +65,8 @@ export async function add_liquidity_to_exist_lp(program: Program<SimpleLiquidity
   // });
   const lpLiquidityQuoteAta = await anchor.utils.token.associatedAddress({
     mint: tokenQuotePubKey,
-    // owner: lpLiquidityPubKey,
-    owner: lpPubKey,
+    owner: lpLiquidityPubKey,
+    // owner: lpPubKey,
   });
   const userQuoteAta = await anchor.utils.token.associatedAddress({
     mint: tokenQuotePubKey,

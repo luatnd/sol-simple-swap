@@ -142,8 +142,8 @@ async function init_new_lp(
   // });
   const lpLiquidityQuoteAta = await anchor.utils.token.associatedAddress({
     mint: quote,
-    // owner: lpLiquidityPubKey
-    owner: lpPubKey,
+    owner: lpLiquidityPubKey
+    // owner: lpPubKey,
   });
   const lpFeeQuoteAta = await anchor.utils.token.associatedAddress({
     mint: quote,
