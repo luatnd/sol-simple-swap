@@ -239,8 +239,8 @@ async function test__swap_token(program: Program<SimpleLiquidityPool>, option: {
       tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
       associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
     })
-    .signers([])
-    // .signers([payer])
+    // .signers([])
+    .signers([payer])
     .rpc()
     .catch(e => {
       VERBOSE && showException && console.log('Error: ', e); // show on-chain logs

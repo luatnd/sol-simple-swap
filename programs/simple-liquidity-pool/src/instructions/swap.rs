@@ -103,10 +103,8 @@ pub struct LpSwap<'info> {
   pub user_quote_ata: Account<'info, token::TokenAccount>,
 
 
-  /// CHECK: TODO
   #[account(mut)]
-  // pub user: Signer<'info>,
-  pub user: UncheckedAccount<'info>,
+  pub user: Signer<'info>,
 
   // pub rent: Sysvar<'info, Rent>,
   pub system_program: Program<'info, System>,
@@ -172,32 +170,6 @@ fn transfer_token_out_of_liquidity<'info>(
   let is_native_and_base_token = for_token == spl_token::native_mint::id();
 
   if is_native_and_base_token {
-    // let bump = ctx.accounts.lp.liquidity_bump;
-    // msg!("[transfer_token_out_of_liquidity] lp.liquidity_bump: {}", bump);
-    //
-    // let signer_seeds: &[&[&[u8]]] = &[&[
-    //   LP_LIQUIDITY_PREFIX,
-    //   token_quote_pubkey.as_ref(),
-    //   &[bump],
-    // ]];
-
-    // case native SOL
-    // system_program::transfer(
-    //   CpiContext::new(
-    //     ctx.accounts.system_program.to_account_info(),
-    //     system_program::Transfer {
-    //       from: ctx.accounts.lp_liquidity.to_account_info(),
-    //       to: if is_fee_transfer {
-    //         ctx.accounts.lp_fee.to_account_info()
-    //       } else {
-    //         ctx.accounts.user.to_account_info()
-    //       },
-    //     },
-    //   ).with_signer(signer_seeds),
-    //   amount,
-    // )
-    // Debit from_account and credit to_account
-
     **ctx.accounts.lp_liquidity
       .to_account_info()
       .try_borrow_mut_lamports()? -= amount;
@@ -210,7 +182,6 @@ fn transfer_token_out_of_liquidity<'info>(
         .to_account_info()
         .try_borrow_mut_lamports()? += amount;
     }
-
     Ok(())
   } else {
     let bump = ctx.accounts.lp.bump;

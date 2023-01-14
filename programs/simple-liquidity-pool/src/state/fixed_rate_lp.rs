@@ -4,8 +4,10 @@ use crate::state::{errors::*, SwapDir};
 ///
 /// this LP is for <Sol, SplToken>
 /// base token is hard coded to SOL
+///
 /// If we need to swap <Sol/SplToken, Sol/SplToken>,
-/// We need to use Wrapped Sol,
+/// We need to use WRAPPED SOL,
+///
 /// which is not a requirement of this test
 /// So I skip it for now
 ///
