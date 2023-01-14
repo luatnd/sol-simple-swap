@@ -150,8 +150,8 @@ async function init_new_lp(
     owner: lpFeePubKey
   });
 
-  const fixedRateDecimal = 10;
-  const tx = await program.methods.initialize(fixedRateDecimal * Math.pow(10, LP_RATE_DECIMAL))
+  const fixedRate = 10;
+  const tx = await program.methods.initialize(fixedRate * Math.pow(10, LP_RATE_DECIMAL))
     .accounts({
       lp: lpPubKey,
       tokenQuote: quote,

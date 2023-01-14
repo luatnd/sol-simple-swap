@@ -6,6 +6,8 @@
 # Usage: ./create-token.sh <mint_amount>
 
 AMOUNT=$1
+URL=$2
+
 if [ "$AMOUNT" = "" ]
 then
   echo "Missing params"
@@ -13,7 +15,15 @@ then
 	exit 1
 fi
 
-alias spl-token-local="spl-token --url localhost"
+if [ "$URL" = "" ]
+then
+  URL="localhost"
+fi
+
+echo "Minting $AMOUNT token on $URL ... "
+echo ""
+
+alias spl-token-local="spl-token --url $URL"
 spl-token-local create-token --decimals 9
 
 echo "Paste token address here: "

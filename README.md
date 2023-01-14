@@ -11,6 +11,11 @@ anchor test
 ```
 
 ### Run single test file
+run test only inside `tests/tmp/tmp.ts`:
+```
+anchor run test-only -- tests/tmp/tmp.ts
+```
+
 ### Run test for single program
 ```
 # rebuild and deploy program IF needed (in terminal tab 2)

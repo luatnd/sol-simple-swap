@@ -15,8 +15,12 @@ pub fn add_liquidity(
   let lp = &mut ctx.accounts.lp;
   lp.add_liquidity(base_amount, quote_amount)?;
 
-  transfer_token_into_pool(&ctx, spl_token::native_mint::id(), base_amount)?;
-  transfer_token_into_pool(&ctx, ctx.accounts.token_quote.key(), quote_amount)?;
+  if base_amount > 0 {
+    transfer_token_into_pool(&ctx, spl_token::native_mint::id(), base_amount)?;
+  }
+  if quote_amount > 0 {
+    transfer_token_into_pool(&ctx, ctx.accounts.token_quote.key(), quote_amount)?;
+  }
 
   Ok(())
 }
